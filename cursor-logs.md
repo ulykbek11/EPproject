@@ -34,3 +34,14 @@
 30) Открыто превью: http://localhost:8080/ — визуальных ошибок не обнаружено, контроль логов сервера продолжается.
 31) Проверка Git: директория не является Git-репозиторием (git rev-parse failed). Удалённые репозитории отсутствуют (git remote -v failed). Привязки к GitHub нет.
 32) Инициализирован Git-репозиторий в корне проекта (git init).
+33) Создан первый коммит: "chore: initial commit" (все файлы проекта добавлены).
+34) Добавлен удалённый origin: https://github.com/ulykbek11/EPproject.git.
+35) Установлена основная ветка: main (git branch -M main).
+36) Выполнен push: git push -u origin main (ветка main опубликована на GitHub).
+37) Проверена конфигурация remote: origin -> https://github.com/ulykbek11/EPproject.git.
+38) Исправлен Vite конфиг: server.host изменён с "::" на "localhost" для стабильного доступа к порту 8080 на Windows.
+39) Добавлен клиентский помощник `src/lib/aiContext.ts` для агрегации контекста профиля (Экзамены и Проекты) из Supabase.
+40) Обновлён `AIChat.tsx`: при отправке сообщений к Edge Function теперь передаётся `profileContext`.
+41) Обновлена Supabase Edge Function `supabase/functions/ai-chat/index.ts`: внедрение `profileContext` в системный промпт для персонализированных ответов ИИ.
+42) Расширён `src/lib/aiContext.ts`: добавлены записи GPA (`gpa_records`), расчёт среднего и взвешенного GPA, включение краткой сводки в `summary`.
+43) Усилен системный промпт Edge Function: добавлен раздел «ИСПОЛЬЗОВАНИЕ ДАННЫХ ПРОФИЛЯ» — явно использовать `profileContext` и не просить повторного описания экзаменов, проектов и GPA.

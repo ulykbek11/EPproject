@@ -6,6 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Sparkles, User, Loader2, BookOpen, GraduationCap, FileText, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { buildProfileContext } from '@/lib/aiContext';
 
 // Простая очистка Markdown-символов из ответа ассистента
 const sanitizeMarkdown = (text: string) => {
@@ -52,6 +54,7 @@ export default function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,13 +63,23 @@ export default function AIChat() {
   }, [messages]);
 
   const streamChat = async (userMessages: Message[]) => {
+    let profileContext: string | null = null;
+    try {
+      if (user?.id) {
+        const ctx = await buildProfileContext(user.id);
+        profileContext = ctx.summary;
+      }
+    } catch (err) {
+      console.warn('Failed to build profile context:', err);
+    }
+
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages: userMessages }),
+      body: JSON.stringify({ messages: userMessages, profileContext }),
     });
 
     if (!response.ok) {
