@@ -24,9 +24,9 @@ const sanitizeMarkdown = (text: string) => {
     // Заголовки #, ##, ###
     .replace(/^#{1,6}\s+/gm, '')
     // Изображения ![alt](url) — удаляем целиком
-    .replace(/!\[[^\]]*\]\([^\)]+\)/g, '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
     // Ссылки [text](url) — оставляем текст
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     // Маркеры списков -, *, + и нумерованные — заменяем на буллет
     .replace(/^\s*[-*+]\s+/gm, '• ')
     .replace(/^\s*\d+\.\s+/gm, '• ')
@@ -54,7 +54,7 @@ export default function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -73,11 +73,10 @@ export default function AIChat() {
       console.warn('Failed to build profile context:', err);
     }
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
+    const response = await fetch(`/api/ai-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ messages: userMessages, profileContext }),
     });

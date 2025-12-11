@@ -45,3 +45,24 @@
 41) Обновлена Supabase Edge Function `supabase/functions/ai-chat/index.ts`: внедрение `profileContext` в системный промпт для персонализированных ответов ИИ.
 42) Расширён `src/lib/aiContext.ts`: добавлены записи GPA (`gpa_records`), расчёт среднего и взвешенного GPA, включение краткой сводки в `summary`.
 43) Усилен системный промпт Edge Function: добавлен раздел «ИСПОЛЬЗОВАНИЕ ДАННЫХ ПРОФИЛЯ» — явно использовать `profileContext` и не просить повторного описания экзаменов, проектов и GPA.
+44) Выполнены коммит и push: `git add -A; git commit -m "feat(ai): include GPA in profileContext and enforce usage in AI prompt"; git push` — изменения опубликованы в GitHub (ветка main).
+45) Проверена прод-сборка после изменений: `npm.cmd run build` — успешно, есть предупреждения Browserslist и порядка @import в CSS (не блокируют деплой).
+46) Запущен dev‑сервер: `npm.cmd run dev` — Local: http://localhost:8080/; открыто превью, ошибок не обнаружено.
+47) Попытка установки зависимостей через `npm install` — блокировка PowerShell (ExecutionPolicy). Повтор через `npm.cmd install` — успешно.
+48) Запущен dev‑сервер: `npm.cmd run dev` — URL: http://localhost:8080/; превью открыто.
+49) Выполнен линт: `npm.cmd run lint` — 5 ошибок, 8 предупреждений (в UI компонентах и AIChat). Исправления не выполнялись в рамках запуска.
+50) Готов план деплоя: Vercel (автодеплой из GitHub), Supabase CLI для миграций и деплоя Edge Function `ai-chat` с секретом `LOVABLE_API_KEY`.
+51) Обновлён .env на новый проект Supabase (project ref `xqootnyvcxkhymhirwar`, URL и publishable key).
+52) Обновлён supabase/config.toml: project_id → `xqootnyvcxkhymhirwar`.
+53) Перезапущен dev‑сервер: `npm.cmd run dev` — Local: http://localhost:8080/.
+54) Открыт превью: http://localhost:8080/ — без ошибок в браузере.
+55) Исправлен CORS в Edge Function: добавлены заголовки Access-Control-Allow-Methods: POST, OPTIONS.
+56) Обновлён AIChat: вместо publishable key для Authorization используется JWT сессии пользователя; добавлен заголовок apikey.
+57) Режим: ACT — внедрён серверный прокси `api/ai-chat.ts` на Vercel для перенаправления запросов к Supabase Edge Function с поддержкой SSE. Заголовок `apikey` берётся из переменной окружения Vercel.
+58) Обновлён `src/pages/dashboard/AIChat.tsx`: отправка сообщений теперь идёт на `/api/ai-chat`, убраны заголовки `Authorization` и `apikey` на клиенте, чтобы исключить CORS и preflight.
+59) План валидации: запустить `npm.cmd run lint` и `npm.cmd run build`. Локальная проверка стрима недоступна, так как `api`‑маршруты исполняются на Vercel.
+60) Режим: ACT (Simplification) — Переписан `api/ai-chat.ts` для прямой работы с Google Gemini API. Удалена зависимость от Supabase Edge Function и Lovable.
+61) Реализация Gemini: используется REST API `streamGenerateContent` (с fallback на обычный запрос с эмуляцией SSE для надежности на Edge). Системный промпт встроен непосредственно в API Handler.
+62) Обновлен `.env.example`: добавлена переменная `GEMINI_API_KEY` с ссылкой на получение ключа.
+63) Апгрейд модели: `api/ai-chat.ts` переключен с `gemini-1.5-flash` на `gemini-1.5-pro` для повышения качества ответов (лучше рассуждает, но чуть медленнее).
+64) Апгрейд модели до Gemini 3.0: Изменен `api/ai-chat.ts` для использования `gemini-3.0-pro-preview`. Увеличен лимит токенов до 8192. Исправлена ошибка дублирования переменных в коде.
