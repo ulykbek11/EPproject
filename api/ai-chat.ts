@@ -103,9 +103,9 @@ export default async function handler(req: Request) {
       ...geminiMessages
     ];
 
-    // Используем Gemini 3.0 Pro Preview (как запросил пользователь)
+    // Revert to Gemini 1.5 Pro because gemini-3.0-pro-preview returned 404 Not Found
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-pro-preview:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,7 +113,7 @@ export default async function handler(req: Request) {
           contents: finalMessages,
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 8192, // Gemini 3 supports longer output
+            maxOutputTokens: 2048,
           }
         }),
       }
