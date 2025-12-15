@@ -103,11 +103,25 @@ export default async function handler(req: Request) {
       ...geminiMessages
     ];
 
-    // Define models in order of preference as requested by user
+    // 1. Validate API Key immediately
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is missing in environment variables');
+      return new Response(JSON.stringify({ 
+        error: 'Configuration Error',
+        details: 'GEMINI_API_KEY is not set in Vercel Environment Variables. Please add it in Settings > Environment Variables.' 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Define models in order of preference
+    // Note: 'gemini-3.0-pro-preview' might not be publicly available yet, so we rely on fallbacks.
+    // We added 'gemini-1.5-pro' as a robust fallback before flash.
     const models = [
-      'gemini-3.0-pro-preview',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
+      'gemini-2.0-flash-exp', // Newest public experimental (often referred to as 2.0)
+      'gemini-1.5-pro',       // Stable High Quality
+      'gemini-1.5-flash'      // Stable High Speed
     ];
 
     let response;
