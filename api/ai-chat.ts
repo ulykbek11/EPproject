@@ -103,26 +103,69 @@ export default async function handler(req: Request) {
       ...geminiMessages
     ];
 
-    // Revert to Gemini 1.5 Pro because gemini-3.0-pro-preview returned 404 Not Found
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: finalMessages,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
+    // Define models in order of preference as requested by user
+    const models = [
+      'gemini-3.0-pro-preview',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
+
+    let response;
+    let usedModel = '';
+    let lastError;
+
+    // Try each model in sequence
+    for (const model of models) {
+      try {
+        console.log(`Attempting to use model: ${model}`);
+        
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: finalMessages,
+              generationConfig: {
+                temperature: 0.7,
+                // All selected models support at least 8192 tokens
+                maxOutputTokens: 8192,
+              }
+            }),
           }
-        }),
+        );
+
+        if (response.ok) {
+          usedModel = model;
+          console.log(`Successfully connected to ${model}`);
+          break;
+        } else {
+          console.warn(`Failed to connect to ${model}: ${response.status} ${response.statusText}`);
+          lastError = await response.text(); // Capture error details
+        }
+      } catch (error) {
+        console.error(`Error with model ${model}:`, error);
+        lastError = error;
       }
-    );
+    }
+
+    if (!response || !response.ok) {
+      console.error('All models failed. Last error:', lastError);
+      return new Response(JSON.stringify({ 
+        error: 'All AI models are currently unavailable. Please try again later.',
+        details: lastError 
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
     if (!response.ok) {
-       const err = await response.text();
-       console.error(err);
-       return new Response(JSON.stringify({ error: err }), { status: 500 });
+      const errorText = await response.text();
+      return new Response(JSON.stringify({ error: `Gemini API Error (${usedModel})`, details: errorText }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     
     const data = await response.json();
