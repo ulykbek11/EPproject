@@ -196,8 +196,8 @@ export default async function handler(req: Request) {
       
       // Return details in the 'error' field so the frontend toast displays it
       return new Response(JSON.stringify({ 
-        error: `AI Error: ${errorMessage.substring(0, 100)}... | Available: ${availableModels}`, 
-        details: lastError 
+        error: `AI Error: All models failed. Details: ${allErrors}`, 
+        details: allErrors
       }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' }
