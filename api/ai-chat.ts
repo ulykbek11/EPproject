@@ -121,10 +121,10 @@ export default async function handler(req: Request) {
     // Define models in order of preference
     // We use the exact names returned by the 'models/list' endpoint to ensure compatibility
     const models = [
-      'gemini-3.0-pro-preview', // Latest Preview (Might be unstable/restricted)
-      'gemini-2.0-flash',       // Standard 2.0 Flash (Fast & Smart)
-      'gemini-1.5-pro',         // High capability fallback
-      'gemini-1.5-flash',       // High speed fallback
+      'gemini-3-pro-preview',   // Correct name without .0
+      'gemini-2.5-flash',       // Available in the list
+      'gemini-2.0-flash',       // Fallback
+      'gemini-1.5-pro',         // Fallback
     ];
 
     let response;
