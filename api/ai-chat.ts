@@ -129,16 +129,28 @@ export default async function handler(req: Request) {
 
     let response;
     let usedModel = '';
-    let lastError;
+    let errors: string[] = [];
 
     // Try each model in sequence
     for (const model of models) {
       try {
         console.log(`Attempting to use model: ${model}`);
         
+        // Prepare messages for this specific model attempt
+        const currentMessages = [
+          {
+            role: 'user',
+            parts: [{ text: systemContent + `\n\nВАЖНО: Если пользователь спросит "какая ты модель", "какая версия" или подобные вопросы, ответь, что ты работаешь на модели: ${model} (Google DeepMind).` }]
+          },
+          {
+            role: 'model',
+            parts: [{ text: 'Принято. Я готов помогать как EduPath AI.' }]
+          },
+          ...geminiMessages
+        ];
+
         // Try v1beta first, as it has the latest models
         let version = 'v1beta';
-        // For older models, v1 might be better, but v1beta usually supports all.
         
         response = await fetch(
           `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`,
@@ -146,11 +158,10 @@ export default async function handler(req: Request) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: finalMessages,
+              contents: currentMessages,
               generationConfig: {
                 temperature: 0.7,
-                // gemini-pro (1.0) only supports 2048 output tokens
-                maxOutputTokens: model === 'gemini-pro' ? 2048 : 8192,
+                maxOutputTokens: 8192,
               }
             }),
           }
@@ -161,12 +172,13 @@ export default async function handler(req: Request) {
           console.log(`Successfully connected to ${model}`);
           break;
         } else {
+          const errorText = await response.text();
           console.warn(`Failed to connect to ${model}: ${response.status} ${response.statusText}`);
-          lastError = await response.text(); // Capture error details
+          errors.push(`${model}: ${response.status} - ${errorText.substring(0, 200)}`);
         }
       } catch (error) {
         console.error(`Error with model ${model}:`, error);
-        lastError = error;
+        errors.push(`${model}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -218,6 +230,9 @@ export default async function handler(req: Request) {
     const encoder = new TextEncoder();
     const sseStream = new ReadableStream({
         start(controller) {
+            // Send a custom event with model info first (optional, if frontend supports it)
+            // Or just append it to the end of the text if needed, but headers are better.
+            
             const chunk = {
                 choices: [{ delta: { content: text } }]
             };
@@ -232,6 +247,7 @@ export default async function handler(req: Request) {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-AI-Model': usedModel, // Send used model in headers
       },
     });
 
