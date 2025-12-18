@@ -174,10 +174,29 @@ export default async function handler(req: Request) {
     if (!response || !response.ok) {
       const errorMessage = typeof lastError === 'string' ? lastError : JSON.stringify(lastError);
       console.error('All models failed. Last error:', errorMessage);
+
+      // DEBUG: Try to list available models to see what is wrong
+      let availableModels = 'Could not fetch models';
+      try {
+        const listResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        );
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          availableModels = (listData.models || [])
+            .map((m: any) => m.name.replace('models/', ''))
+            .filter((n: string) => n.includes('gemini'))
+            .join(', ');
+        } else {
+            availableModels = `ListModels failed: ${listResponse.status}`;
+        }
+      } catch (e) {
+        availableModels = `ListModels error: ${e}`;
+      }
       
       // Return details in the 'error' field so the frontend toast displays it
       return new Response(JSON.stringify({ 
-        error: `AI Error: ${errorMessage.substring(0, 200)}...`, // Truncate to avoid huge toasts
+        error: `AI Error: ${errorMessage.substring(0, 100)}... | Available: ${availableModels}`, 
         details: lastError 
       }), {
         status: 503,
