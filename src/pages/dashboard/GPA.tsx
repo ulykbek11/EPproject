@@ -140,8 +140,8 @@ export default function GPA() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('Файл слишком большой (макс. 5МБ)');
+    if (file.size > 3 * 1024 * 1024) { // 3MB limit
+        toast.error('Файл слишком большой (макс. 3МБ)');
         return;
     }
 
@@ -158,7 +158,7 @@ export default function GPA() {
 
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error || 'Ошибка анализа');
+                throw new Error(errData.details || errData.error || 'Ошибка анализа');
             }
 
             const data = await response.json();
@@ -179,9 +179,9 @@ export default function GPA() {
             } else {
                 toast.error('Не удалось найти оценки на изображении');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Analyze error:', error);
-            toast.error('Ошибка при анализе табеля');
+            toast.error(error.message || 'Ошибка при анализе табеля');
         } finally {
             setAnalyzing(false);
             if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input

@@ -1,7 +1,3 @@
-export const config = {
-  runtime: 'edge',
-};
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export default async function handler(req: Request) {
@@ -26,21 +22,21 @@ export default async function handler(req: Request) {
     const model = 'gemini-2.0-flash'; 
 
     const prompt = `
-    Analyze this image of an academic transcript or report card.
+    Analyze this image of an academic transcript or report card (likely from Kundelik.kz or similar systems).
     Extract all subjects and their corresponding grades.
     
     Rules:
-    1. Identify the subject name (e.g., Mathematics, Physics, History).
-    2. Identify the numerical grade (e.g., 5, 4, 3, 100, 95). If the grade is a letter (A, B, C), convert it to a number if possible or keep it as is. 
-       Preferably convert to a 5-point scale if it looks like a Russian/CIS system (5=Excellent, 4=Good, 3=Satisfactory).
-       If it's a 100-point scale, keep it as is.
-    3. Ignore non-academic entries like "Behavior" or "Attendance" if possible, but if unsure, include them.
-    4. Return ONLY a valid JSON array. Do not include markdown formatting (like \`\`\`json).
+    1. Identify the subject name (e.g., Mathematics, Algebra, Physics, History).
+    2. Identify the FINAL grade for the period if available (look for columns like "Itog", "Total", "1 chetv", "Final").
+    3. If NO final grade is explicitly shown, but there is a row of daily grades (e.g., "5 4 5 3"), calculate the AVERAGE of these numbers.
+    4. If the grade is a letter (A, B, C), convert it to a number if possible or keep it as is.
+    5. Ignore non-academic entries like "Behavior", "Attendance", "Klassniy chas" if possible.
+    6. Return ONLY a valid JSON array. Do not include markdown formatting.
     
     Format:
     [
-      { "subject": "Subject Name", "grade": 5 },
-      { "subject": "Another Subject", "grade": 4 }
+      { "subject": "Algebra", "grade": 4.5 },
+      { "subject": "History", "grade": 5 }
     ]
     `;
 
@@ -55,14 +51,14 @@ export default async function handler(req: Request) {
               { text: prompt },
               {
                 inline_data: {
-                  mime_type: 'image/jpeg', // Assuming JPEG, but API often handles PNG too if specified correctly or generic base64
-                  data: image.split(',')[1] // Remove data:image/jpeg;base64, prefix
+                  mime_type: 'image/jpeg',
+                  data: image.split(',')[1]
                 }
               }
             ]
           }],
           generationConfig: {
-            temperature: 0.1, // Low temperature for precise extraction
+            temperature: 0.1,
             maxOutputTokens: 4096,
           }
         }),
