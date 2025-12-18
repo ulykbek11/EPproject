@@ -163,9 +163,12 @@ export default async function handler(req: Request) {
     }
 
     if (!response || !response.ok) {
-      console.error('All models failed. Last error:', lastError);
+      const errorMessage = typeof lastError === 'string' ? lastError : JSON.stringify(lastError);
+      console.error('All models failed. Last error:', errorMessage);
+      
+      // Return details in the 'error' field so the frontend toast displays it
       return new Response(JSON.stringify({ 
-        error: 'All AI models are currently unavailable. Please try again later.',
+        error: `AI Error: ${errorMessage.substring(0, 200)}...`, // Truncate to avoid huge toasts
         details: lastError 
       }), {
         status: 503,
