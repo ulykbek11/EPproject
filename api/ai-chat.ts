@@ -119,13 +119,12 @@ export default async function handler(req: Request) {
     const apiKey = GEMINI_API_KEY.trim();
 
     // Define models in order of preference
-    // We use versioned names (001/002) which are sometimes more reliable than aliases
-    // We also include 'gemini-pro' (1.0) as a final fallback
+    // We use the exact names returned by the 'models/list' endpoint to ensure compatibility
     const models = [
-      'gemini-2.0-flash',     // Latest stable
-      'gemini-1.5-pro',       // Stable Pro
-      'gemini-1.5-flash',     // Stable Flash
-      'gemini-pro'            // Legacy 1.0 (Final fallback)
+      'gemini-3.0-pro-preview', // Latest Preview (Might be unstable/restricted)
+      'gemini-2.0-flash',       // Standard 2.0 Flash (Fast & Smart)
+      'gemini-1.5-pro',         // High capability fallback
+      'gemini-1.5-flash',       // High speed fallback
     ];
 
     let response;
