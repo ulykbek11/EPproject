@@ -140,7 +140,7 @@ export default async function handler(req: Request) {
         const currentMessages = [
           {
             role: 'user',
-            parts: [{ text: systemContent + `\n\nВАЖНО: Если пользователь спросит "какая ты модель", "какая версия" или подобные вопросы, ответь, что ты работаешь на модели: ${model} (Google DeepMind).` }]
+            parts: [{ text: systemContent }]
           },
           {
             role: 'model',
