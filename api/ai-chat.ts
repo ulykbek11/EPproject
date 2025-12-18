@@ -115,12 +115,17 @@ export default async function handler(req: Request) {
       });
     }
 
+    // Trim API key to remove accidental spaces
+    const apiKey = GEMINI_API_KEY.trim();
+
     // Define models in order of preference
-    // User requested: Gemini 2.5 (we use 2.0 Flash as it's the latest public API version) -> Gemini 1.5
+    // We use versioned names (001/002) which are sometimes more reliable than aliases
+    // We also include 'gemini-pro' (1.0) as a final fallback
     const models = [
-      'gemini-2.0-flash',     // Latest stable Flash (often called 2.5 in some contexts or just 2.0)
-      'gemini-1.5-pro',       // High quality fallback
-      'gemini-1.5-flash'      // High speed fallback
+      'gemini-2.0-flash',     // Latest stable
+      'gemini-1.5-pro',       // Stable Pro
+      'gemini-1.5-flash',     // Stable Flash
+      'gemini-pro'            // Legacy 1.0 (Final fallback)
     ];
 
     let response;
@@ -132,8 +137,12 @@ export default async function handler(req: Request) {
       try {
         console.log(`Attempting to use model: ${model}`);
         
+        // Try v1beta first, as it has the latest models
+        let version = 'v1beta';
+        // For older models, v1 might be better, but v1beta usually supports all.
+        
         response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -141,8 +150,8 @@ export default async function handler(req: Request) {
               contents: finalMessages,
               generationConfig: {
                 temperature: 0.7,
-                // All selected models support at least 8192 tokens
-                maxOutputTokens: 8192,
+                // gemini-pro (1.0) only supports 2048 output tokens
+                maxOutputTokens: model === 'gemini-pro' ? 2048 : 8192,
               }
             }),
           }
