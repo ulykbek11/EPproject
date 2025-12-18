@@ -22,19 +22,16 @@ export default async function handler(req: Request) {
     const model = 'gemini-2.0-flash'; 
 
     const prompt = `
-    Analyze this image of a school transcript (Kundelik.kz or similar).
-    Task: Extract subject names and their FINAL grades.
+    OCR TASK: Extract data from this school transcript.
     
-    INSTRUCTIONS:
-    1. Search for specific subject names like "Mathematics" (Algebra, Geometry), "Physics", "Chemistry", "History", "Literature", "English", "Russian", "Kazakh", "Biology", "Geography", "Informatics", "PE".
-    2. For each subject, find the FINAL GRADE column (often labeled "Itog", "Total", "Year", "Exam", or the last column).
-    3. If there is NO final grade column, but a row of daily grades (e.g. "5 4 5"), CALCULATE THE AVERAGE.
-    4. RETURN ONLY JSON. No markdown. No explanations.
+    1. Identify subject names (e.g. Algebra, Physics, English).
+    2. For each subject, extract ALL numerical grades visible in its row.
+    3. Do NOT calculate anything. Do NOT find the average. Just list the numbers.
     
-    Output Format:
+    Return JSON:
     [
-      { "subject": "Algebra", "grade": 5 },
-      { "subject": "Physics", "grade": 4 }
+      { "subject": "Algebra", "raw_numbers": [5, 4, 5, 5] },
+      { "subject": "Physics", "raw_numbers": [4, 4, 3] }
     ]
     `;
 
@@ -57,7 +54,7 @@ export default async function handler(req: Request) {
           }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 2000,
           }
         }),
       }
@@ -78,8 +75,35 @@ export default async function handler(req: Request) {
 
     // Clean up the text to ensure it's valid JSON
     const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    let result = [];
+    try {
+        const rawResult = JSON.parse(cleanText);
+        
+        // Post-processing: Calculate grades from raw numbers
+        result = rawResult.map((item: any) => {
+            let grade = 0;
+            if (item.raw_numbers && Array.isArray(item.raw_numbers) && item.raw_numbers.length > 0) {
+                // Heuristic: If there is a clear "final" grade (often separated or last), we might want it.
+                // But averaging is safer for "current standing" if no final exists.
+                // Let's take the AVERAGE of all numbers as the grade.
+                const validNumbers = item.raw_numbers.map((n: any) => Number(n)).filter((n: number) => !isNaN(n));
+                if (validNumbers.length > 0) {
+                    const sum = validNumbers.reduce((a: number, b: number) => a + b, 0);
+                    grade = Number((sum / validNumbers.length).toFixed(2));
+                }
+            }
+            return {
+                subject: item.subject,
+                grade: grade
+            };
+        });
+    } catch (e) {
+        console.error('JSON Parse error:', e);
+        return new Response(JSON.stringify({ error: 'Failed to parse AI response', details: cleanText }), { status: 500 });
+    }
 
-    return new Response(JSON.stringify({ result: JSON.parse(cleanText) }), {
+    return new Response(JSON.stringify({ result }), {
       headers: { 'Content-Type': 'application/json' },
     });
 
