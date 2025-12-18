@@ -22,21 +22,19 @@ export default async function handler(req: Request) {
     const model = 'gemini-2.0-flash'; 
 
     const prompt = `
-    Analyze this image of an academic transcript or report card (likely from Kundelik.kz or similar systems).
-    Extract all subjects and their corresponding grades.
+    Analyze this image of a school transcript (Kundelik.kz or similar).
+    Task: Extract subject names and their FINAL grades.
     
-    Rules:
-    1. Identify the subject name (e.g., Mathematics, Algebra, Physics, History).
-    2. Identify the FINAL grade for the period if available (look for columns like "Itog", "Total", "1 chetv", "Final").
-    3. If NO final grade is explicitly shown, but there is a row of daily grades (e.g., "5 4 5 3"), calculate the AVERAGE of these numbers.
-    4. If the grade is a letter (A, B, C), convert it to a number if possible or keep it as is.
-    5. Ignore non-academic entries like "Behavior", "Attendance", "Klassniy chas" if possible.
-    6. Return ONLY a valid JSON array. Do not include markdown formatting.
+    INSTRUCTIONS:
+    1. Search for specific subject names like "Mathematics" (Algebra, Geometry), "Physics", "Chemistry", "History", "Literature", "English", "Russian", "Kazakh", "Biology", "Geography", "Informatics", "PE".
+    2. For each subject, find the FINAL GRADE column (often labeled "Itog", "Total", "Year", "Exam", or the last column).
+    3. If there is NO final grade column, but a row of daily grades (e.g. "5 4 5"), CALCULATE THE AVERAGE.
+    4. RETURN ONLY JSON. No markdown. No explanations.
     
-    Format:
+    Output Format:
     [
-      { "subject": "Algebra", "grade": 4.5 },
-      { "subject": "History", "grade": 5 }
+      { "subject": "Algebra", "grade": 5 },
+      { "subject": "Physics", "grade": 4 }
     ]
     `;
 

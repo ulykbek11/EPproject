@@ -140,54 +140,91 @@ export default function GPA() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) { // 3MB limit
-        toast.error('Файл слишком большой (макс. 3МБ)');
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit (resizing will handle it)
+        toast.error('Файл слишком большой (макс. 10МБ)');
         return;
     }
 
     setAnalyzing(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        try {
-            const response = await fetch('/api/analyze-gpa', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64String }),
-            });
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.details || errData.error || 'Ошибка анализа');
-            }
+    // Image resizing function
+    const resizeImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1024;
+                    const MAX_HEIGHT = 1024;
+                    let width = img.width;
+                    let height = img.height;
 
-            const data = await response.json();
-            if (Array.isArray(data.result)) {
-                // Merge with existing empty records or replace if only one empty record exists
-                const newRecords = data.result.map((item: any) => ({
-                    subject: item.subject,
-                    grade: Number(item.grade),
-                    credits: 1 // Default credit
-                }));
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
 
-                if (records.length === 1 && records[0].subject === '' && records[0].grade === 0) {
-                    setRecords(newRecords);
-                } else {
-                    setRecords([...records, ...newRecords]);
-                }
-                toast.success(`Распознано ${newRecords.length} предметов`);
-            } else {
-                toast.error('Не удалось найти оценки на изображении');
-            }
-        } catch (error: any) {
-            console.error('Analyze error:', error);
-            toast.error(error.message || 'Ошибка при анализе табеля');
-        } finally {
-            setAnalyzing(false);
-            if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
-        }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8)); // 80% quality JPEG
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
     };
-    reader.readAsDataURL(file);
+
+    try {
+        const resizedBase64 = await resizeImage(file);
+        
+        const response = await fetch('/api/analyze-gpa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: resizedBase64 }),
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.details || errData.error || 'Ошибка анализа');
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data.result)) {
+            // Merge with existing empty records or replace if only one empty record exists
+            const newRecords = data.result.map((item: any) => ({
+                subject: item.subject,
+                grade: Number(item.grade),
+                credits: 1 // Default credit
+            }));
+
+            if (records.length === 1 && records[0].subject === '' && records[0].grade === 0) {
+                setRecords(newRecords);
+            } else {
+                setRecords([...records, ...newRecords]);
+            }
+            toast.success(`Распознано ${newRecords.length} предметов`);
+        } else {
+            toast.error('Не удалось найти оценки на изображении');
+        }
+    } catch (error: any) {
+        console.error('Analyze error:', error);
+        toast.error(error.message || 'Ошибка при анализе табеля');
+    } finally {
+        setAnalyzing(false);
+        if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+    }
   };
 
   const gpa = calculateGPA();
