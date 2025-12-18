@@ -116,12 +116,11 @@ export default async function handler(req: Request) {
     }
 
     // Define models in order of preference
-    // Note: 'gemini-3.0-pro-preview' might not be publicly available yet, so we rely on fallbacks.
-    // We added 'gemini-1.5-pro' as a robust fallback before flash.
+    // User requested: Gemini 2.5 (we use 2.0 Flash as it's the latest public API version) -> Gemini 1.5
     const models = [
-      'gemini-2.0-flash-exp', // Newest public experimental (often referred to as 2.0)
-      'gemini-1.5-pro',       // Stable High Quality
-      'gemini-1.5-flash'      // Stable High Speed
+      'gemini-2.0-flash',     // Latest stable Flash (often called 2.5 in some contexts or just 2.0)
+      'gemini-1.5-pro',       // High quality fallback
+      'gemini-1.5-flash'      // High speed fallback
     ];
 
     let response;
