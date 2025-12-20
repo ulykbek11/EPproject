@@ -1,24 +1,30 @@
 export const config = {
-  runtime: 'edge',
+  maxDuration: 60, // 60 seconds (Pro) or 10 seconds (Hobby)
+  api: {
+    bodyParser: {
+      sizeLimit: '4.5mb', // Vercel Serverless Function limit
+    },
+  },
 };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { image } = await req.json();
+    // In Vercel Node.js functions, req.body is already parsed if Content-Type is application/json
+    const { image } = req.body || {};
 
     if (!image) {
-      return new Response(JSON.stringify({ error: 'No image data provided' }), { status: 400 });
+      return res.status(400).json({ error: 'No image data provided' });
     }
 
     if (!OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set');
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500 });
+      return res.status(500).json({ error: 'Server configuration error' });
     }
 
     const apiKey = OPENAI_API_KEY.trim();
@@ -71,14 +77,14 @@ export default async function handler(req: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenAI API error:', errorText);
-      return new Response(JSON.stringify({ error: 'Failed to analyze image', details: errorText }), { status: response.status });
+      return res.status(response.status).json({ error: 'Failed to analyze image', details: errorText });
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
 
     if (!text) {
-      return new Response(JSON.stringify({ error: 'No text extracted from image' }), { status: 500 });
+      return res.status(500).json({ error: 'No text extracted from image' });
     }
 
     // Clean up the text to ensure it's valid JSON
@@ -108,15 +114,13 @@ export default async function handler(req: Request) {
         });
     } catch (e) {
         console.error('JSON Parse error:', e);
-        return new Response(JSON.stringify({ error: 'Failed to parse AI response', details: cleanText }), { status: 500 });
+        return res.status(500).json({ error: 'Failed to parse AI response', details: cleanText });
     }
 
-    return new Response(JSON.stringify({ result }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ result });
 
   } catch (error) {
     console.error('Analyze GPA error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error', details: String(error) }), { status: 500 });
+    return res.status(500).json({ error: 'Internal Server Error', details: String(error) });
   }
 }

@@ -157,8 +157,8 @@ export default function GPA() {
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1024;
-                    const MAX_HEIGHT = 1024;
+                    const MAX_WIDTH = 768; // Reduced resolution for speed
+                    const MAX_HEIGHT = 768;
                     let width = img.width;
                     let height = img.height;
 
