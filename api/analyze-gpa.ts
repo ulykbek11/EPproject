@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -12,14 +12,13 @@ export default async function handler(req: Request) {
       return new Response(JSON.stringify({ error: 'No image data provided' }), { status: 400 });
     }
 
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not set');
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500 });
     }
 
-    const apiKey = GEMINI_API_KEY.trim();
-    // Use Gemini 2.0 Flash for fast image processing
-    const model = 'gemini-2.0-flash'; 
+    const apiKey = OPENAI_API_KEY.trim();
+    const model = 'gpt-4o'; 
 
     const prompt = `
     OCR TASK: Extract data from this school transcript.
@@ -36,38 +35,43 @@ export default async function handler(req: Request) {
     `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: image.split(',')[1]
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 2000,
-          }
+          model: model,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                {
+                  type: "image_url",
+                  image_url: {
+                    "url": image, // image is already base64 data URI
+                  },
+                },
+              ],
+            },
+          ],
+          max_tokens: 2000,
+          temperature: 0.1,
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
+      console.error('OpenAI API error:', errorText);
       return new Response(JSON.stringify({ error: 'Failed to analyze image', details: errorText }), { status: response.status });
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data.choices?.[0]?.message?.content;
 
     if (!text) {
       return new Response(JSON.stringify({ error: 'No text extracted from image' }), { status: 500 });
