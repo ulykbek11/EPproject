@@ -189,18 +189,15 @@ export default function GPA() {
     try {
         const resizedBase64 = await resizeImage(file);
         
-        const response = await fetch('/api/analyze-gpa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: resizedBase64 }),
+        const { data, error } = await supabase.functions.invoke('analyze-gpa', {
+            body: { image: resizedBase64 }
         });
 
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.details || errData.error || 'Ошибка анализа');
+        if (error) {
+            console.error('Supabase Function Error:', error);
+            throw new Error(error.message || 'Ошибка вызова функции анализа');
         }
 
-        const data = await response.json();
         if (Array.isArray(data.result)) {
             // Merge with existing empty records or replace if only one empty record exists
             const newRecords = data.result.map((item: any) => ({
