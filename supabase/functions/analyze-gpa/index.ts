@@ -28,12 +28,12 @@ Deno.serve(async (req) => {
       console.error("GEMINI_API_KEY is not set");
       return new Response(
         JSON.stringify({ error: "Server configuration error: GEMINI_API_KEY not found" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Use gemini-1.5-flash for maximum stability and speed
-    const model = "gemini-1.5-flash"; 
+    // Use gemini-2.0-flash-lite-preview-02-05 for speed (Gemini 2)
+    const model = "gemini-2.0-flash-lite-preview-02-05"; 
     const apiKey = GEMINI_API_KEY.trim();
     
     // STRICT PROMPT according to user requirements
@@ -132,49 +132,45 @@ Deno.serve(async (req) => {
             details: errorText,
             status: response.status 
         }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    console.log("Gemini response received");
-    
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    console.log("Gemini Raw Response:", JSON.stringify(data));
 
-    if (!text) {
-      console.error("No text in Gemini response", JSON.stringify(data));
-      return new Response(
-        JSON.stringify({ error: "No text extracted from image", raw: data }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Clean up the text to ensure it's valid JSON
-    const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
-
-    let result;
-    try {
-      result = JSON.parse(jsonStr);
-    } catch (e) {
-      console.error("Failed to parse JSON:", jsonStr);
-      return new Response(
-        JSON.stringify({ error: "Failed to parse AI response", raw_text: text }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check for "unreadable" error from AI
-    if (result.error === "unreadable") {
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        console.error("Invalid Gemini response structure:", data);
         return new Response(
-            JSON.stringify({ error: "Image is unreadable or not a transcript" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ error: "Invalid response from Gemini", details: data }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 
-    // Server-side GPA Calculation (Simple Average for now, as strict rules forbid AI doing it)
-    // The user wants: "Server independently calculates GPA"
-    // We assume 5-point scale for simplicity unless grades are > 5.
+    const text = data.candidates[0].content.parts[0].text;
+    console.log("Extracted Text:", text);
+
+    // Clean markdown code blocks
+    const jsonString = text.replace(/```json\n|\n```/g, "").trim();
     
+    let result;
+    try {
+        result = JSON.parse(jsonString);
+    } catch (e) {
+        console.error("JSON Parse Error:", e, "Text:", text);
+        return new Response(
+            JSON.stringify({ error: "Failed to parse Gemini response", details: text }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    if (result.error) {
+        return new Response(
+            JSON.stringify({ error: result.error }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
     const subjects = result.subjects || [];
     
     if (!Array.isArray(subjects)) {
@@ -214,10 +210,10 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Edge Function Error:", error);
+    console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

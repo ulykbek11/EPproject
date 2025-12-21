@@ -192,16 +192,14 @@ export default function GPA() {
 
         if (error) {
             console.error('Supabase Function Error:', error);
-            // Try to extract a more specific error message if available
-            let errorMessage = error.message || 'Ошибка вызова функции анализа';
-            if (error instanceof Error && 'context' in error) {
-                 // @ts-ignore
-                 const context = error.context;
-                 if (context && typeof context === 'object' && 'error' in context) {
-                     errorMessage = context.error;
-                 }
-            }
-            throw new Error(errorMessage);
+            toast.error('Ошибка сервера. Попробуйте еще раз.');
+            return;
+        }
+
+        if (data?.error) {
+            console.error('Analysis Error:', data.error, data.details);
+            toast.error(`Ошибка анализа: ${data.error}`);
+            return;
         }
 
         // Handle the new strict format { subjects: [...], gpa: number }
