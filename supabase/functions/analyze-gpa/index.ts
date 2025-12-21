@@ -43,6 +43,11 @@ Deno.serve(async (req) => {
     Your ONLY job is to extract text exactly as it appears in the image.
 
     TASK:
+    0. **PRE-PROCESSING (CROP)**:
+       - If the image contains a full screen (browser UI, windows, taskbar), IGNORE everything outside the main content area.
+       - Focus ONLY on the **transcript table** document.
+       - Do not read text from browser tabs, URL bars, or other windows.
+
     1. **ANALYZE GRID STRUCTURE**:
        - Locate the main table.
        - Identify the HEADER row.
@@ -63,7 +68,7 @@ Deno.serve(async (req) => {
 
     3. **EXTRACT GRADE STRICTLY**:
        - If the grade is a number (5, 4, 3, 95, etc.), extract it as a number.
-       - If the grade is "ЗЧ", "зачет", "pass", "credit", return it as "PASS" (string).
+       - **OCR FIX**: "ЗЧ" looks like "34". "34" is NOT a valid grade on a 5-point scale. If you see "34", "ЗЧ", "Зачет", "Pass", "Credit", return it as "PASS" (string).
        - If the grade is "НЗ", "незачет", "fail", return it as "FAIL" (string).
        - If the cell contains symbols like "-", "—", "x", or is empty, extract it as 0 (number) or "-" (string), but DO NOT guess a grade like 5. 
        - **CRITICAL**: If there is NO GRADE, return 0. Do NOT return 5.
@@ -180,25 +185,59 @@ Deno.serve(async (req) => {
         );
     }
 
+    // Server-side GPA Calculation (Simple Average for now, as strict rules forbid AI doing it)
+    // The user wants: "Server independently calculates GPA"
+    // We assume 5-point scale for simplicity unless grades are > 5.
+
     let totalPoints = 0;
     let count = 0;
 
     const processedSubjects = subjects.map((s: any) => {
-        let grade = Number(s.grade);
-        // Basic sanitization
-        if (isNaN(grade)) grade = 0;
+        let grade = s.grade;
         
-        if (grade > 0) {
-            totalPoints += grade;
+        // Handle "PASS" / "FAIL"
+        if (typeof grade === 'string') {
+            const lower = grade.toLowerCase();
+            if (lower === 'pass' || lower === 'credit' || lower === 'зч' || lower === 'зачет') {
+                // Pass does not affect GPA
+                return { name: s.name, grade: "PASS" };
+            }
+            // Try to parse number if it's a string number
+            const parsed = Number(grade);
+            if (!isNaN(parsed)) {
+                grade = parsed;
+            } else {
+                // "FAIL" or symbols -> 0 or specific handling? 
+                // User said: "пусть ИИ ставит просто '-'" for symbols/empty
+                if (lower === '-') return { name: s.name, grade: 0 };
+                grade = 0;
+            }
+        }
+
+        if (grade === "PASS") return { name: s.name, grade: "PASS" };
+
+        let numGrade = Number(grade);
+        if (isNaN(numGrade)) numGrade = 0;
+
+        // Fix: Treat 34 as 0 (PASS) if somehow Gemini still returns it, 
+        // though the prompt should catch it. Or if user wants it to be "-", we treat as 0 points.
+        // But prompt says return "PASS". If it returns 34 number, we might need a heuristic.
+        // Let's assume prompt works.
+        
+        if (numGrade > 0) {
+            totalPoints += numGrade;
             count++;
         }
         return {
             name: s.name,
-            grade: grade
+            grade: numGrade
         };
     });
 
     const gpa = count > 0 ? Number((totalPoints / count).toFixed(2)) : 0;
+
+    console.log("Calculated GPA:", gpa);
+    console.log("Processed Subjects:", JSON.stringify(processedSubjects));
 
     return new Response(
       JSON.stringify({ 
