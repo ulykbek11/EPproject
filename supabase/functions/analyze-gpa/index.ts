@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use gemini-flash-latest as fallback since 2.0-flash-lite hits quota limits
-    const model = "gemini-flash-latest"; 
+    // Use gemini-1.5-flash for maximum stability and speed
+    const model = "gemini-1.5-flash"; 
     const apiKey = GEMINI_API_KEY.trim();
     
     // STRICT PROMPT according to user requirements
@@ -68,25 +68,15 @@ Deno.serve(async (req) => {
        - If the cell contains symbols like "-", "—", "x", or is empty, extract it as 0 (number) or "-" (string), but DO NOT guess a grade like 5. 
        - **CRITICAL**: If there is NO GRADE, return 0. Do NOT return 5.
 
-    4. **VERIFICATION STEP (CRITICAL)**:
-       - Before outputting JSON, count the grades you found.
-       - Count how many "5"s are in the image's target column.
-       - Count how many "4"s are in the image's target column.
-       - Count how many "3"s are in the image's target column.
-       - Compare these counts with your extracted list.
-       - **ONLY return the result if the counts MATCH.**
+    4. **VERIFICATION**:
+       - Count the grades you found (5s, 4s, 3s).
+       - Ensure your extraction list matches these counts.
 
     5. **ERROR HANDLING**:
        - If the image is unreadable, blurry, or not a transcript, return: { "error": "unreadable" }
 
     OUTPUT FORMAT (Strict JSON):
     {
-      "verification": {
-        "count_5": 2,
-        "count_4": 1,
-        "count_3": 0,
-        "count_other": 1
-      },
       "subjects": [
         { "name": "History", "grade": 5 },
         { "name": "Physical Education", "grade": "PASS" }
