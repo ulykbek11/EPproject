@@ -15,7 +15,6 @@ interface Exam {
   exam_name: string;
   score: number | null;
   max_score: number;
-  exam_date: string | null;
   notes: string | null;
 }
 
@@ -39,7 +38,6 @@ export default function Exams() {
     exam_name: '',
     score: '',
     max_score: '100',
-    exam_date: '',
     notes: ''
   });
 
@@ -69,19 +67,23 @@ export default function Exams() {
 
     setSaving(true);
     try {
+      // Handle score parsing (replace comma with dot for floats)
+      const parsedScore = formData.score 
+        ? Number(formData.score.toString().replace(',', '.')) 
+        : null;
+
       const { error } = await supabase.from('exams').insert({
         user_id: user.id,
         exam_name: formData.exam_name,
-        score: formData.score ? Number(formData.score) : null,
+        score: parsedScore,
         max_score: Number(formData.max_score) || 100,
-        exam_date: formData.exam_date || null,
         notes: formData.notes || null
       });
 
       if (error) throw error;
 
       toast.success('Экзамен добавлен');
-      setFormData({ exam_name: '', score: '', max_score: '100', exam_date: '', notes: '' });
+      setFormData({ exam_name: '', score: '', max_score: '100', notes: '' });
       setDialogOpen(false);
       loadExams();
     } catch (error) {
@@ -165,6 +167,7 @@ export default function Exams() {
                     <Label>Балл</Label>
                     <Input
                       type="number"
+                      step="0.01"
                       value={formData.score}
                       onChange={(e) => setFormData(prev => ({ ...prev, score: e.target.value }))}
                       placeholder="85"
@@ -178,14 +181,6 @@ export default function Exams() {
                       onChange={(e) => setFormData(prev => ({ ...prev, max_score: e.target.value }))}
                     />
                   </div>
-                </div>
-                <div>
-                  <Label>Дата экзамена</Label>
-                  <Input
-                    type="date"
-                    value={formData.exam_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, exam_date: e.target.value }))}
-                  />
                 </div>
                 <div>
                   <Label>Заметки</Label>
@@ -253,12 +248,6 @@ export default function Exams() {
                         className="h-full gradient-hero rounded-full"
                         style={{ width: `${(exam.score / exam.max_score) * 100}%` }}
                       />
-                    </div>
-                  )}
-                  {exam.exam_date && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(exam.exam_date).toLocaleDateString('ru-RU')}
                     </div>
                   )}
                   {exam.notes && (

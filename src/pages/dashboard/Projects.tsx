@@ -16,9 +16,6 @@ interface Project {
   title: string;
   description: string | null;
   category: string | null;
-  link: string | null;
-  start_date: string | null;
-  end_date: string | null;
 }
 
 const categories = ['Исследование', 'Программирование', 'Дизайн', 'Волонтёрство', 'Бизнес', 'Творчество', 'Другое'];
@@ -32,10 +29,7 @@ export default function Projects() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
-    link: '',
-    start_date: '',
-    end_date: ''
+    category: ''
   });
 
   useEffect(() => {
@@ -68,16 +62,13 @@ export default function Projects() {
         user_id: user.id,
         title: formData.title,
         description: formData.description || null,
-        category: formData.category || null,
-        link: formData.link || null,
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null
+        category: formData.category || null
       });
 
       if (error) throw error;
 
       toast.success('Проект добавлен');
-      setFormData({ title: '', description: '', category: '', link: '', start_date: '', end_date: '' });
+      setFormData({ title: '', description: '', category: '' });
       setDialogOpen(false);
       loadProjects();
     } catch (error) {
@@ -164,32 +155,6 @@ export default function Projects() {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <Label>Ссылка на проект</Label>
-                  <Input
-                    value={formData.link}
-                    onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Дата начала</Label>
-                    <Input
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Дата окончания</Label>
-                    <Input
-                      type="date"
-                      value={formData.end_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                    />
-                  </div>
-                </div>
                 <Button type="submit" className="w-full" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Сохранить
@@ -248,27 +213,6 @@ export default function Projects() {
                       {project.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-4">
-                    {(project.start_date || project.end_date) && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {project.start_date && new Date(project.start_date).toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' })}
-                        {project.start_date && project.end_date && ' — '}
-                        {project.end_date && new Date(project.end_date).toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' })}
-                      </div>
-                    )}
-                    {project.link && (
-                      <a
-                        href={project.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Ссылка
-                      </a>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             ))}
