@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use gemini-2.0-flash-lite-preview-02-05 for speed (Gemini 2)
-    const model = "gemini-2.0-flash-lite-preview-02-05"; 
+    // Use gemini-1.5-flash for stability
+    const model = "gemini-1.5-flash"; 
     const apiKey = GEMINI_API_KEY.trim();
     
     // STRICT PROMPT according to user requirements
