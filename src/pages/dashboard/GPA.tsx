@@ -332,9 +332,9 @@ export default function GPA() {
                           min="0"
                           max="100"
                           step="0.1"
-                          value={record.grade || ''}
+                          value={record.grade === 0 ? '' : record.grade}
                           onChange={(e) => updateRecord(index, 'grade', e.target.value)}
-                          placeholder="5"
+                          placeholder="-"
                         />
                       </div>
                       <Button

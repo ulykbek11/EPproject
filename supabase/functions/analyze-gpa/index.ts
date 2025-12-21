@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
        - If the grade is a number (5, 4, 3, 95, etc.), extract it as a number.
        - If the grade is "ЗЧ", "зачет", "pass", "credit", return it as "PASS" (string).
        - If the grade is "НЗ", "незачет", "fail", return it as "FAIL" (string).
-       - If the cell is empty or contains "-", skip it or treat as no grade.
+       - If the cell contains symbols like "-", "—", "x", or is empty, extract it as 0 (number) or "-" (string), but DO NOT guess a grade like 5. 
+       - **CRITICAL**: If there is NO GRADE, return 0. Do NOT return 5.
 
     4. **VERIFICATION STEP (CRITICAL)**:
        - Before outputting JSON, count the grades you found.
