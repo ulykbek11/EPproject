@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
        - If the grade is a number (5, 4, 3, 95, etc.), extract it as a number.
        - **OCR FIX**: "ЗЧ" looks like "34". "34" is NOT a valid grade on a 5-point scale. If you see "34", "ЗЧ", "Зачет", "Pass", "Credit", return it as "PASS" (string).
        - If the grade is "НЗ", "незачет", "fail", return it as "FAIL" (string).
-       - If the cell contains symbols like "-", "—", "x", or is empty, extract it as 0 (number) or "-" (string), but DO NOT guess a grade like 5. 
+       - **EMPTY CELLS**: If the cell is empty, has a dash "-", "x", or is blank, return 0. 
+       - **PHANTOM GRADE WARNING**: NEVER invent a grade for an empty cell. Do NOT default to 5. If it is empty, it is 0.
        - **CRITICAL**: If there is NO GRADE, return 0. Do NOT return 5.
 
     4. **VERIFICATION**:
