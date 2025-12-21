@@ -217,17 +217,22 @@ Deno.serve(async (req) => {
         if (grade === "PASS") return { name: s.name, grade: "PASS" };
 
         let numGrade = Number(grade);
-        if (isNaN(numGrade)) numGrade = 0;
+         if (isNaN(numGrade)) numGrade = 0;
 
-        // Fix: Treat 34 as 0 (PASS) if somehow Gemini still returns it, 
-        // though the prompt should catch it. Or if user wants it to be "-", we treat as 0 points.
-        // But prompt says return "PASS". If it returns 34 number, we might need a heuristic.
-        // Let's assume prompt works.
-        
-        if (numGrade > 0) {
-            totalPoints += numGrade;
-            count++;
-        }
+         // HEURISTIC FIX: 
+         // User reported "ЗЧ" (PASS) being read as "34". 
+         // "34" is likely an OCR error for "ЗЧ" on a 5-point scale.
+         // If we see 34, we treat it as 0 (PASS).
+         if (numGrade === 34) {
+             console.log(`Detected grade 34 for ${s.name}, treating as PASS (OCR error for ЗЧ)`);
+             numGrade = 0;
+             return { name: s.name, grade: "PASS" };
+         }
+         
+         if (numGrade > 0) {
+             totalPoints += numGrade;
+             count++;
+         }
         return {
             name: s.name,
             grade: numGrade
