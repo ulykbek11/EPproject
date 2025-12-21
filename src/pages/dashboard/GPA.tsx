@@ -195,7 +195,16 @@ export default function GPA() {
 
         if (error) {
             console.error('Supabase Function Error:', error);
-            throw new Error(error.message || 'Ошибка вызова функции анализа');
+            // Try to extract a more specific error message if available
+            let errorMessage = error.message || 'Ошибка вызова функции анализа';
+            if (error instanceof Error && 'context' in error) {
+                 // @ts-ignore
+                 const context = error.context;
+                 if (context && typeof context === 'object' && 'error' in context) {
+                     errorMessage = context.error;
+                 }
+            }
+            throw new Error(errorMessage);
         }
 
         if (Array.isArray(data.result)) {
