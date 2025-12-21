@@ -126,14 +126,11 @@ export default function GPA() {
     const validRecords = records.filter(r => r.subject && r.grade > 0);
     if (validRecords.length === 0) return 0;
 
-    // Detect scale (5-point or 100-point/4.0)
-    // Simple logic: if any grade > 5, assume 100-point or similar and just average for now
-    // Ideally, user selects system. For now, let's just do weighted average.
+    // Simple Average (as requested to remove credits logic)
+    const totalPoints = validRecords.reduce((sum, r) => sum + r.grade, 0);
+    const count = validRecords.length;
     
-    const totalPoints = validRecords.reduce((sum, r) => sum + (r.grade * r.credits), 0);
-    const totalCredits = validRecords.reduce((sum, r) => sum + r.credits, 0);
-    
-    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : 0;
+    return count > 0 ? (totalPoints / count).toFixed(2) : 0;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,10 +204,13 @@ export default function GPA() {
             throw new Error(errorMessage);
         }
 
-        if (Array.isArray(data.result)) {
+        // Handle the new strict format { subjects: [...], gpa: number }
+        const subjects = data.subjects || data.result; // fallback for older versions
+
+        if (Array.isArray(subjects)) {
             // Merge with existing empty records or replace if only one empty record exists
-            const newRecords = data.result.map((item: any) => ({
-                subject: item.subject,
+            const newRecords = subjects.map((item: any) => ({
+                subject: item.name || item.subject, // Map 'name' from new format to 'subject'
                 grade: Number(item.grade),
                 credits: 1 // Default credit
             }));
@@ -221,6 +221,10 @@ export default function GPA() {
                 setRecords([...records, ...newRecords]);
             }
             toast.success(`Распознано ${newRecords.length} предметов`);
+            
+            // Note: We use the server-calculated GPA just for display or confirmation if needed,
+            // but for now we continue to calculate locally based on the records list 
+            // to allow user editing.
         } else {
             toast.error('Не удалось найти оценки на изображении');
         }
@@ -333,15 +337,6 @@ export default function GPA() {
                           placeholder="5"
                         />
                       </div>
-                      <div className="w-20">
-                        <Label className="text-xs text-muted-foreground">Кредиты</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={record.credits}
-                          onChange={(e) => updateRecord(index, 'credits', e.target.value)}
-                        />
-                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -375,8 +370,7 @@ export default function GPA() {
         <Card className="mt-6">
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              <strong>Как рассчитывается GPA:</strong> Средний балл = сумма (оценка × кредиты) / сумма кредитов. 
-              Используйте кредиты для учёта важности предметов. По умолчанию кредит = 1.
+              <strong>Как рассчитывается GPA:</strong> Средний балл = сумма всех оценок / количество предметов.
             </p>
           </CardContent>
         </Card>
