@@ -15,10 +15,11 @@ function formatExam(e: { exam_name: string; score: number | null; max_score: num
 
 function formatProject(p: { title: string; category: string | null; description: string | null; link: string | null; start_date: string | null; end_date: string | null; ai_analysis?: string | null; ai_rating?: number | null }) {
   const cat = p.category ? ` (${p.category})` : '';
+  const desc = p.description ? `\n   Описание: ${p.description}` : '';
   const dates = p.start_date || p.end_date ? `, сроки: ${p.start_date ?? '—'} → ${p.end_date ?? '—'}` : '';
   const link = p.link ? `, ссылка: ${p.link}` : '';
-  const aiInfo = p.ai_rating ? ` [AI Rating: ${p.ai_rating}/100${p.ai_analysis ? `, Analysis: ${p.ai_analysis}` : ''}]` : '';
-  return `${p.title}${cat}${dates}${link}${aiInfo}`;
+  const aiInfo = p.ai_rating ? `\n   [AI Rating: ${p.ai_rating}/100${p.ai_analysis ? ` | Analysis: ${p.ai_analysis}` : ''}]` : '';
+  return `${p.title}${cat}${dates}${link}${desc}${aiInfo}`;
 }
 
 export async function buildProfileContext(userId: string): Promise<ProfileContextResult> {
@@ -30,7 +31,7 @@ export async function buildProfileContext(userId: string): Promise<ProfileContex
 
   const projectsResp = await supabase
     .from('projects')
-    .select('title, category, description, link, start_date, end_date')
+    .select('title, category, description, link, start_date, end_date, ai_analysis, ai_rating')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
