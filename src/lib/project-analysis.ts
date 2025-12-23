@@ -22,7 +22,7 @@ export const analyzeProject = async (
       Category: ${category}
       Description: ${description || 'No description provided'}
       ${fileName ? `File Name: ${fileName}` : ''}
-      ${fileContent ? `File Content Preview: ${fileContent.slice(0, 2000)}...` : ''}
+      ${fileContent ? `File Content Preview: ${fileContent.slice(0, 15000)}...` : ''}
 
       EVALUATION CRITERIA (Ivy League Standard):
       1. Innovation & Creativity: Is this original work or a standard template? Does it solve a real problem?

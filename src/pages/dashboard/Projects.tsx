@@ -81,6 +81,10 @@ export default function Projects() {
 
         // Extract text content for AI analysis (supports PDF, DOCX, TXT, etc.)
         fileContent = await extractTextFromFile(selectedFile);
+        
+        if (!fileContent && ['pdf', 'docx', 'txt'].includes(fileExt?.toLowerCase() || '')) {
+          toast.warning("Не удалось прочитать текст файла. ИИ оценит проект только по названию и описанию.");
+        }
       }
 
       // AI Analysis

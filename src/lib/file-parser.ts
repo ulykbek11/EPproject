@@ -3,7 +3,8 @@ import mammoth from 'mammoth';
 
 // Set worker source for PDF.js
 // We use the CDN version to avoid complex bundler configuration issues with workers
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// Note: pdfjs-dist v5+ uses .mjs extension for worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
   const fileType = file.name.split('.').pop()?.toLowerCase();
