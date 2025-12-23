@@ -24,6 +24,8 @@ interface Project {
 
 const categories = ['Исследование', 'Программирование', 'Дизайн', 'Волонтёрство', 'Бизнес', 'Творчество', 'Другое'];
 
+import { extractTextFromFile } from '@/lib/file-parser';
+
 export default function Projects() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -77,10 +79,8 @@ export default function Projects() {
         if (uploadError) throw uploadError;
         filePath = fileName;
 
-        // Try to read text content for AI analysis
-        if (['txt', 'md', 'json', 'js', 'ts', 'tsx', 'py', 'csv', 'html', 'css'].includes(fileExt?.toLowerCase() || '')) {
-          fileContent = await selectedFile.text();
-        }
+        // Extract text content for AI analysis (supports PDF, DOCX, TXT, etc.)
+        fileContent = await extractTextFromFile(selectedFile);
       }
 
       // AI Analysis
