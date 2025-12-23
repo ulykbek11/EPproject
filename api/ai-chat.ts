@@ -67,7 +67,7 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { messages, profileContext } = await req.json();
+    const { messages, profileContext, systemPrompt } = await req.json();
 
     if (!GEMINI_API_KEY) {
       console.error('GEMINI_API_KEY is not set');
@@ -85,9 +85,12 @@ export default async function handler(req: Request) {
       parts: [{ text: msg.content }]
     }));
 
-    let systemContent = SYSTEM_PROMPT;
-    if (profileContext) {
+    let systemContent = systemPrompt || SYSTEM_PROMPT;
+    if (profileContext && !systemPrompt) {
       systemContent += `\n\nДАННЫЕ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ:\n${profileContext}`;
+    } else if (profileContext) {
+       // If custom system prompt is used, just append context if needed, or assume caller handles it
+       systemContent += `\n\nCONTEXT DATA:\n${profileContext}`;
     }
 
     // Trim API key to remove accidental spaces

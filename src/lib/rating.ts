@@ -47,8 +47,9 @@ export const calculateStudentRating = async (userId: string): Promise<RatingResu
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        messages: [{ role: 'user', content: prompt }],
-        profileContext: null // Context is already in the prompt
+        messages: [{ role: 'user', content: "Evaluate my profile based on the system instructions." }],
+        systemPrompt: prompt,
+        profileContext: null 
       }),
     });
 
@@ -89,7 +90,26 @@ export const calculateStudentRating = async (userId: string): Promise<RatingResu
     
     // Clean up markdown code blocks if present
     const cleanJson = fullResponse.replace(/```json\s*|\s*```/g, '').trim();
-    const result = JSON.parse(cleanJson);
+    
+    // Robust JSON extraction
+    let result;
+    try {
+      result = JSON.parse(cleanJson);
+    } catch (e) {
+      console.warn("Direct JSON parse failed, trying extraction", e);
+      const jsonStart = fullResponse.indexOf('{');
+      const jsonEnd = fullResponse.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonStr = fullResponse.substring(jsonStart, jsonEnd + 1);
+        try {
+          result = JSON.parse(jsonStr);
+        } catch (e2) {
+          throw new Error(`JSON parsing failed even after extraction: ${e2}`);
+        }
+      } else {
+        throw new Error("No JSON found in response");
+      }
+    }
     
     // Update profile
     const { error } = await supabase

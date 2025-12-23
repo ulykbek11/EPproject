@@ -64,7 +64,8 @@ export const analyzeProject = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content: "Analyze this project based on the benchmarks and criteria provided." }],
+        systemPrompt: prompt,
       }),
     });
 
@@ -112,6 +113,14 @@ export const analyzeProject = async (
     try {
       return JSON.parse(cleanJson);
     } catch (e) {
+      // Try robust extraction
+      const jsonStart = fullResponse.indexOf('{');
+      const jsonEnd = fullResponse.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+         try {
+           return JSON.parse(fullResponse.substring(jsonStart, jsonEnd + 1));
+         } catch (e2) {}
+      }
       console.error('Failed to parse AI response:', fullResponse);
       return { score: 50, analysis: "Could not generate detailed analysis." };
     }
