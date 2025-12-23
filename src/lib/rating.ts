@@ -13,24 +13,30 @@ export const calculateStudentRating = async (userId: string): Promise<RatingResu
     
     // Construct the prompt to get a JSON response
     const prompt = `
-      Based on the following student profile, evaluate their competitiveness for top international universities (like Ivy League, Oxbridge, etc.) on a scale of 0 to 100.
+      You are an extremely strict and realistic Admissions Officer at a top-tier university (Harvard, MIT, Oxford).
+      Your task is to evaluate this student's profile with brutal honesty to determine their true competitiveness.
       
-      0-40: Low chance / Needs significant improvement
-      41-60: Average / Good for local or less competitive universities
-      61-80: Strong / Good candidate for top 50-100 universities
-      81-90: Excellent / Strong candidate for top 20-50 universities
-      91-100: Outstanding / Competitive for top 10 universities
+      CONTEXT:
+      Grade inflation is widespread. Perfect grades are not enough. 
+      We are looking for "spikes" - exceptional achievements in specific areas (International awards, published research, founded startups).
+      
+      SCORING STANDARDS (0-100):
+      95-100: Exceptional. International Olympiad Medalist (IMO, IPhO), published research in top journals, or founder of a globally active NGO.
+      85-94: Very Strong. National awards, top 1% of country, significant leadership (Student Body President of a large school), complex technical projects.
+      70-84: Strong. Regional awards, top 10% of class, good extracurriculars but nothing unique.
+      50-69: Average. Good grades, standard club memberships, no major awards.
+      0-49: Below average for top universities.
       
       Consider:
-      - GPA (if available)
+      - GPA (if available) - Low GPA is a major red flag.
       - Exam scores (SAT, IELTS, etc.)
-      - Projects and achievements
+      - Projects and achievements (Are they truly impressive or just standard?)
       
       You MUST return the result in strictly VALID JSON format without any markdown formatting.
       Format:
       {
         "score": number,
-        "analysis": "A short summary (max 3 sentences) explaining the rating."
+        "analysis": "A short, critical summary (max 3 sentences) explaining the rating and what is missing for a top tier university."
       }
       
       Profile Data:
