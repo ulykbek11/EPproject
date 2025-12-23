@@ -6,8 +6,9 @@ const apiKey = process.env.GEMINI_API_KEY;
 const version = "v1";
 
 const modelsToTest = [
-  "gemini-1.5-flash",
-  "gemini-pro"
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-flash-latest"
 ];
 
 async function run() {
@@ -50,6 +51,21 @@ async function run() {
     }
     // Small delay
     await new Promise(r => setTimeout(r, 1000));
+  }
+  
+  // If loop finishes, try listing models
+  console.log("\n--- Diagnostic: Listing Available Models ---");
+  try {
+      const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      if (listResp.ok) {
+          const data = await listResp.json();
+          const names = (data.models || []).map((m: any) => m.name.replace('models/', ''));
+          console.log("Your key has access to:", names);
+      } else {
+          console.log("Could not list models. Status:", listResp.status);
+      }
+  } catch (e) {
+      console.log("Error listing models:", e);
   }
 }
 

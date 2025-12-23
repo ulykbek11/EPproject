@@ -34,8 +34,8 @@ async function getFileContent(filePath: string): Promise<string> {
        const arrayBuffer = await data.arrayBuffer();
        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
        let fullText = '';
-       // Limit to first 5 pages to avoid huge context
-       const maxPages = Math.min(pdf.numPages, 5);
+       // Limit to first 50 pages to cover most full documents while avoiding extreme edge cases
+       const maxPages = Math.min(pdf.numPages, 50);
        for (let i = 1; i <= maxPages; i++) {
          const page = await pdf.getPage(i);
          const textContent = await page.getTextContent();
@@ -69,8 +69,9 @@ async function formatProject(p: { title: string; category: string | null; descri
   if (p.file_path) {
     const content = await getFileContent(p.file_path);
     if (content) {
-      // Limit snippet length to avoid token limits (e.g., 500 chars)
-      fileContentSnippet = `\n   [Файл проекта (начало): "${content.slice(0, 800).replace(/\n/g, ' ')}..."]`;
+      // Use full content (truncated only at extreme length, e.g. 100k chars)
+      const safeContent = content.length > 100000 ? content.slice(0, 100000) + '... (truncated)' : content;
+      fileContentSnippet = `\n   [Полное содержимое файла проекта:\n"""\n${safeContent}\n"""]`;
     }
   }
 
