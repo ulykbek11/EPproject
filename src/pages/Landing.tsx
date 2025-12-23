@@ -90,7 +90,7 @@ export default function Landing() {
             
             <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-slide-up">
               Умный помощник для{' '}
-              <span className="gradient-hero bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 поступления
               </span>
             </h1>

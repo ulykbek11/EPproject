@@ -6,16 +6,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FolderOpen, Plus, Trash2, ExternalLink, Loader2, Calendar } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, ExternalLink, Loader2, Calendar, FileText, Download, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { analyzeProject } from '@/lib/project-analysis';
 
 interface Project {
   id: string;
   title: string;
   description: string | null;
   category: string | null;
+  file_path: string | null;
+  ai_analysis: string | null;
+  ai_rating: number | null;
 }
 
 const categories = ['Исследование', 'Программирование', 'Дизайн', 'Волонтёрство', 'Бизнес', 'Творчество', 'Другое'];
@@ -26,6 +30,7 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -58,17 +63,50 @@ export default function Projects() {
 
     setSaving(true);
     try {
+      let filePath = null;
+      let fileContent = '';
+
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project_files')
+          .upload(fileName, selectedFile);
+        
+        if (uploadError) throw uploadError;
+        filePath = fileName;
+
+        // Try to read text content for AI analysis
+        if (['txt', 'md', 'json', 'js', 'ts', 'tsx', 'py', 'csv', 'html', 'css'].includes(fileExt?.toLowerCase() || '')) {
+          fileContent = await selectedFile.text();
+        }
+      }
+
+      // AI Analysis
+      const aiResult = await analyzeProject(
+        formData.title,
+        formData.description,
+        formData.category || 'Other',
+        selectedFile?.name,
+        fileContent
+      );
+
       const { error } = await supabase.from('projects').insert({
         user_id: user.id,
         title: formData.title,
         description: formData.description || null,
-        category: formData.category || null
+        category: formData.category || null,
+        file_path: filePath,
+        ai_analysis: aiResult.analysis,
+        ai_rating: aiResult.score
       });
 
       if (error) throw error;
 
-      toast.success('Проект добавлен');
+      toast.success('Проект добавлен и проанализирован');
       setFormData({ title: '', description: '', category: '' });
+      setSelectedFile(null);
       setDialogOpen(false);
       loadProjects();
     } catch (error) {
@@ -79,8 +117,12 @@ export default function Projects() {
     }
   };
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string, filePath: string | null) => {
     try {
+      if (filePath) {
+        await supabase.storage.from('project_files').remove([filePath]);
+      }
+      
       const { error } = await supabase.from('projects').delete().eq('id', id);
       if (error) throw error;
       toast.success('Проект удалён');
@@ -88,6 +130,11 @@ export default function Projects() {
     } catch (error) {
       toast.error('Ошибка удаления');
     }
+  };
+
+  const getFileUrl = (path: string) => {
+    const { data } = supabase.storage.from('project_files').getPublicUrl(path);
+    return data.publicUrl;
   };
 
   return (
@@ -137,6 +184,19 @@ export default function Projects() {
                   />
                 </div>
                 <div>
+                  <Label>Файл проекта (опционально)</Label>
+                  <div className="mt-2">
+                    <Input
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Поддерживаются любые файлы. Текстовые файлы будут проанализированы ИИ.
+                    </p>
+                  </div>
+                </div>
+                <div>
                   <Label>Категория</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {categories.map((cat) => (
@@ -157,7 +217,7 @@ export default function Projects() {
                 </div>
                 <Button type="submit" className="w-full" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Сохранить
+                  {saving ? 'Анализ и сохранение...' : 'Сохранить'}
                 </Button>
               </form>
             </DialogContent>
@@ -186,11 +246,11 @@ export default function Projects() {
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
             {projects.map((project) => (
-              <Card key={project.id} className="group hover:shadow-md transition-shadow">
+              <Card key={project.id} className="group hover:shadow-md transition-shadow flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                      <CardTitle className="text-lg line-clamp-1">{project.title}</CardTitle>
                       {project.category && (
                         <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary mt-1">
                           {project.category}
@@ -200,19 +260,48 @@ export default function Projects() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteProject(project.id)}
+                      onClick={() => deleteProject(project.id, project.file_path)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col gap-3">
                   {project.description && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {project.description}
                     </p>
                   )}
+                  
+                  {/* AI Analysis Result */}
+                  {(project.ai_rating !== null || project.ai_analysis) && (
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                      <div className="flex items-center gap-2 mb-2 font-medium text-primary">
+                        <Sparkles className="w-4 h-4" />
+                        <span>AI Оценка: <span className={project.ai_rating && project.ai_rating >= 70 ? "text-success" : "text-primary"}>{project.ai_rating}/100</span></span>
+                      </div>
+                      {project.ai_analysis && (
+                        <p className="text-xs text-muted-foreground line-clamp-3">
+                          {project.ai_analysis}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-auto pt-2 flex items-center gap-2">
+                    {project.file_path && (
+                      <a 
+                        href={getFileUrl(project.file_path)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-xs text-primary hover:underline"
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        Открыть файл
+                      </a>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
