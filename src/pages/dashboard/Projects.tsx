@@ -114,8 +114,8 @@ export default function Projects() {
       setDialogOpen(false);
       loadProjects();
     } catch (error) {
-      toast.error('Ошибка сохранения');
       console.error(error);
+      toast.error(error instanceof Error ? error.message : 'Ошибка сохранения');
     } finally {
       setSaving(false);
     }

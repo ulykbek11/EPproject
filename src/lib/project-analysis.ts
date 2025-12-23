@@ -58,7 +58,10 @@ export const analyzeProject = async (
       }),
     });
 
-    if (!response.ok) throw new Error('AI service error');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.details || errorData.error || 'AI service error');
+    }
     
     // Simple response parsing (assuming non-streaming for simplicity in this helper, 
     // but the API is streaming. I need to handle stream like in rating.ts)
