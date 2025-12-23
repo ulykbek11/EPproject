@@ -1,4 +1,3 @@
-// import { Readable } from 'stream';
 
 export const config = {
   runtime: 'edge',
@@ -91,39 +90,14 @@ export default async function handler(req: Request) {
       systemContent += `\n\nДАННЫЕ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ:\n${profileContext}`;
     }
 
-    const finalMessages = [
-      {
-        role: 'user',
-        parts: [{ text: systemContent }]
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'Принято. Я готов помогать как EduPath AI.' }]
-      },
-      ...geminiMessages
-    ];
-
-    // 1. Validate API Key immediately
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is missing in environment variables');
-      return new Response(JSON.stringify({ 
-        error: 'Configuration Error',
-        details: 'GEMINI_API_KEY is not set in Vercel Environment Variables. Please add it in Settings > Environment Variables.' 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     // Trim API key to remove accidental spaces
     const apiKey = GEMINI_API_KEY.trim();
 
     // Define models in order of preference
-    // We use the exact names returned by the 'models/list' endpoint to ensure compatibility
     const models = [
-      'gemini-2.5-flash',       // Verified working
-      'gemini-flash-latest',    // Good fallback
-      'gemini-2.0-flash',       // Fallback
+      'gemini-2.5-flash',       
+      'gemini-flash-latest',    
+      'gemini-2.0-flash',       
     ];
 
     let response;
@@ -135,7 +109,6 @@ export default async function handler(req: Request) {
       try {
         console.log(`Attempting to use model: ${model}`);
         
-        // Prepare messages for this specific model attempt
         const currentMessages = [
           {
             role: 'user',
@@ -148,7 +121,7 @@ export default async function handler(req: Request) {
           ...geminiMessages
         ];
 
-        // Try v1beta first, as it has the latest models
+        // Try v1beta as it has the latest models
         let version = 'v1beta';
         
         response = await fetch(
@@ -172,8 +145,16 @@ export default async function handler(req: Request) {
           break;
         } else {
           const errorText = await response.text();
-          console.warn(`Failed to connect to ${model}: ${response.status} ${response.statusText}`);
-          errors.push(`${model}: ${response.status} - ${errorText.substring(0, 200)}`);
+          console.warn(`Failed to connect to ${model}: ${response.status}`);
+          
+          // Parse error text to be more readable
+          let cleanError = errorText;
+          try {
+             const jsonError = JSON.parse(errorText);
+             cleanError = jsonError.error?.message || errorText;
+          } catch (e) {}
+          
+          errors.push(`${model}: ${response.status} - ${cleanError.substring(0, 200)}`);
         }
       } catch (error) {
         console.error(`Error with model ${model}:`, error);
@@ -182,8 +163,7 @@ export default async function handler(req: Request) {
     }
 
     if (!response || !response.ok) {
-      const errorMessage = typeof lastError === 'string' ? lastError : JSON.stringify(lastError);
-      console.error('All models failed. Last error:', errorMessage);
+      console.error('All models failed.');
 
       // DEBUG: Try to list available models to see what is wrong
       let availableModels = 'Could not fetch models';
@@ -198,26 +178,20 @@ export default async function handler(req: Request) {
             .filter((n: string) => n.includes('gemini'))
             .join(', ');
         } else {
-            availableModels = `ListModels failed: ${listResponse.status}`;
+            const listErr = await listResponse.text();
+            availableModels = `ListModels failed: ${listResponse.status} - ${listErr.substring(0, 100)}`;
         }
       } catch (e) {
         availableModels = `ListModels error: ${e}`;
       }
       
-      // Return details in the 'error' field so the frontend toast displays it
+      const allErrors = errors.join(' | ');
+
       return new Response(JSON.stringify({ 
-        error: `AI Error: All models failed. Details: ${allErrors}`, 
-        details: allErrors
+        error: `AI Error: All models failed.`, 
+        details: `Errors: ${allErrors}. \n\nAvailable Models for your key: ${availableModels}`
       }), {
         status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      return new Response(JSON.stringify({ error: `Gemini API Error (${usedModel})`, details: errorText }), {
-        status: response.status,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -229,9 +203,6 @@ export default async function handler(req: Request) {
     const encoder = new TextEncoder();
     const sseStream = new ReadableStream({
         start(controller) {
-            // Send a custom event with model info first (optional, if frontend supports it)
-            // Or just append it to the end of the text if needed, but headers are better.
-            
             const chunk = {
                 choices: [{ delta: { content: text } }]
             };
@@ -246,12 +217,12 @@ export default async function handler(req: Request) {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'X-AI-Model': usedModel, // Send used model in headers
+        'X-AI-Model': usedModel, 
       },
     });
 
   } catch (error) {
     console.error('API Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Internal Server Error', details: String(error) }), { status: 500 });
   }
 }
