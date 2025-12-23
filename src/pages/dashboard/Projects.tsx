@@ -274,8 +274,8 @@ export default function Projects() {
                     </p>
                   )}
                   
-                  {/* AI Analysis Result */}
-                  {(project.ai_rating !== null || project.ai_analysis) && (
+                  {/* AI Analysis Result - HIDDEN as per user request */}
+                  {/* {(project.ai_rating !== null || project.ai_analysis) && (
                     <div className="bg-muted/50 rounded-lg p-3 text-sm">
                       <div className="flex items-center gap-2 mb-2 font-medium text-primary">
                         <Sparkles className="w-4 h-4" />
@@ -287,7 +287,7 @@ export default function Projects() {
                         </p>
                       )}
                     </div>
-                  )}
+                  )} */}
 
                   <div className="mt-auto pt-2 flex items-center gap-2">
                     {project.file_path && (

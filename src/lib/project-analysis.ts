@@ -14,30 +14,39 @@ export const analyzeProject = async (
 ): Promise<ProjectAnalysisResult> => {
   try {
     const prompt = `
-      Evaluate the following student project for university admission competitiveness (Ivy League level).
-      
+      You are an experienced Admissions Officer at a top-tier Ivy League university (e.g., Harvard, MIT, Stanford).
+      Your task is to evaluate the following student project to determine its potential impact on their university application.
+
       Project Details:
       Title: ${title}
       Category: ${category}
       Description: ${description || 'No description provided'}
       ${fileName ? `File Name: ${fileName}` : ''}
-      ${fileContent ? `File Content Preview: ${fileContent.slice(0, 1000)}...` : ''}
+      ${fileContent ? `File Content Preview: ${fileContent.slice(0, 2000)}...` : ''}
 
-      Rate it on a scale of 0-100 based on:
-      - Innovation and creativity
-      - Technical/Academic complexity
-      - Impact and scale
-      - Relevance to chosen category
+      EVALUATION CRITERIA (Ivy League Standard):
+      1. Innovation & Creativity: Is this original work or a standard template? Does it solve a real problem?
+      2. Depth & Complexity: Does it demonstrate advanced skills (technical, artistic, leadership) for a high school student?
+      3. Impact & Scale: Did it affect others? Was it published, launched, or awarded?
+      4. Initiative: Did the student go above and beyond requirements?
 
-      0-40: Basic school project
-      41-60: Good local level project
-      61-80: Strong regional/national level
-      81-100: Exceptional international level
+      SCORING GUIDE (0-100):
+      - 90-100 (World Class): Published research, international awards, profitable startup, or widespread social impact. Rare.
+      - 75-89 (Excellent): National recognition, complex custom software, significant community leadership, or highly creative portfolio. Strong for Ivy League.
+      - 60-74 (Good): Regional awards, solid functional app/website, school leadership roles. Good for top 50 universities.
+      - 40-59 (Average): Standard school projects, basic clones, volunteering without leadership. Common.
+      - 0-39 (Weak/Incomplete): Minimal effort, unclear description, or just a file upload without context.
+
+      INSTRUCTIONS:
+      - Be fair but realistic. Do not give 10/100 unless it's completely empty or nonsense. 
+      - If the input is sparse (e.g., just a title/file without description), score it based on *potential* but note the lack of detail (e.g., 40-50 range).
+      - If it's a "test" or "hello world", score it low (e.g., 20-30) but explain why.
+      - Provide a constructive, professional analysis.
 
       Return strictly VALID JSON:
       {
         "score": number,
-        "analysis": "Short feedback (max 3 sentences)."
+        "analysis": "Professional feedback (2-3 sentences) explaining the rating and 1 tip for improvement."
       }
     `;
 
