@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ProfileContextResult {
   exams: Array<{ exam_name: string; score: number | null; max_score: number | null; exam_date: string | null }>;
-  projects: Array<{ title: string; category: string | null; description: string | null; link: string | null; start_date: string | null; end_date: string | null }>;
+  projects: Array<{ title: string; category: string | null; description: string | null; link: string | null; start_date: string | null; end_date: string | null; ai_analysis?: string | null; ai_rating?: number | null }>;
   gpa: Array<{ subject: string; grade: number; credits: number | null; semester: string | null }>;
   summary: string;
 }
@@ -13,11 +13,12 @@ function formatExam(e: { exam_name: string; score: number | null; max_score: num
   return `${e.exam_name}: ${scorePart}${datePart}`;
 }
 
-function formatProject(p: { title: string; category: string | null; description: string | null; link: string | null; start_date: string | null; end_date: string | null }) {
+function formatProject(p: { title: string; category: string | null; description: string | null; link: string | null; start_date: string | null; end_date: string | null; ai_analysis?: string | null; ai_rating?: number | null }) {
   const cat = p.category ? ` (${p.category})` : '';
   const dates = p.start_date || p.end_date ? `, сроки: ${p.start_date ?? '—'} → ${p.end_date ?? '—'}` : '';
   const link = p.link ? `, ссылка: ${p.link}` : '';
-  return `${p.title}${cat}${dates}${link}`;
+  const aiInfo = p.ai_rating ? ` [AI Rating: ${p.ai_rating}/100${p.ai_analysis ? `, Analysis: ${p.ai_analysis}` : ''}]` : '';
+  return `${p.title}${cat}${dates}${link}${aiInfo}`;
 }
 
 export async function buildProfileContext(userId: string): Promise<ProfileContextResult> {
