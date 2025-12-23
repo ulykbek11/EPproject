@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use gemini-flash-latest for maximum compatibility with the new key
-    const model = "gemini-flash-latest"; 
+    // Use gemini-flash-lite-latest for better availability on free tier
+    const model = "gemini-flash-lite-latest"; 
     const apiKey = GEMINI_API_KEY.trim();
     
     // STRICT PROMPT according to user requirements

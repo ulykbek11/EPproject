@@ -98,9 +98,10 @@ export default async function handler(req: Request) {
 
     // Define models in order of preference
     const models = [
-      'gemini-2.5-flash',       
-      'gemini-flash-latest',    
-      'gemini-2.0-flash',       
+      'gemini-flash-lite-latest', // Working model (Lite version has better availability)
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-2.0-flash',
     ];
 
     let response;
