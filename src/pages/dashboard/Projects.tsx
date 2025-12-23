@@ -274,20 +274,15 @@ export default function Projects() {
                     </p>
                   )}
                   
-                  {/* AI Analysis Result - HIDDEN as per user request */}
-                  {/* {(project.ai_rating !== null || project.ai_analysis) && (
-                    <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                      <div className="flex items-center gap-2 mb-2 font-medium text-primary">
-                        <Sparkles className="w-4 h-4" />
-                        <span>AI Оценка: <span className={project.ai_rating && project.ai_rating >= 70 ? "text-success" : "text-primary"}>{project.ai_rating}/100</span></span>
-                      </div>
-                      {project.ai_analysis && (
-                        <p className="text-xs text-muted-foreground line-clamp-3">
-                          {project.ai_analysis}
-                        </p>
-                      )}
+                  {/* AI Analysis Result - Rating ONLY */}
+                  {project.ai_rating !== null && (
+                    <div className="bg-muted/50 rounded-lg p-2 text-sm inline-flex items-center gap-2 w-fit">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-primary">
+                        AI Оценка: <span className={project.ai_rating >= 70 ? "text-success" : "text-primary"}>{project.ai_rating}/100</span>
+                      </span>
                     </div>
-                  )} */}
+                  )}
 
                   <div className="mt-auto pt-2 flex items-center gap-2">
                     {project.file_path && (
