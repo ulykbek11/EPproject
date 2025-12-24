@@ -33,3 +33,5 @@
     - Frontend (`Exams.tsx`):
         - Changed "Score" input from `type="number"` to `type="text"` (with `inputMode="decimal"`).
         - This fully enables typing decimal scores with commas (e.g., "8,5") or dots (e.g., "7.5") regardless of browser locale.
+    - Database:
+        - Updated `exams` table schema to change `score` and `max_score` columns from `INTEGER` to `DECIMAL(5,2)` to support fractional grades.

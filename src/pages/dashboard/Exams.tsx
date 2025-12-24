@@ -177,7 +177,6 @@ export default function Exams() {
                           setFormData(prev => ({ ...prev, score: val }));
                         }
                       }}
-                      placeholder="8.5"
                     />
                   </div>
                   <div>
