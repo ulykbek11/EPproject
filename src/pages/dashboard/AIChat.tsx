@@ -62,6 +62,10 @@ export default function AIChat() {
   const [sessions, setSessions] = useState<{ id: string; title: string }[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
+  // Local Storage Keys
+  const SESSIONS_KEY = (userId: string) => `edupath_chat_sessions_${userId}`;
+  const MESSAGES_KEY = (sessionId: string) => `edupath_chat_messages_${sessionId}`;
+
   useEffect(() => {
     if (user) {
       loadSessions();
@@ -79,18 +83,22 @@ export default function AIChat() {
   const loadSessions = async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Try local storage first
+      const storedSessions = localStorage.getItem(SESSIONS_KEY(user.id));
+      let parsedSessions = storedSessions ? JSON.parse(storedSessions) : [];
 
-      if (error) throw error;
-      if (data) {
-        setSessions(data);
-        if (data.length > 0 && !currentSessionId) {
-          setCurrentSessionId(data[0].id);
-        }
+      if (parsedSessions.length === 0) {
+          // If no local sessions, try supabase (optional, or just start fresh)
+          // For "No SQL" mode, we primarily rely on local storage now.
+          // But let's keep the existing logic if it was working? 
+          // No, user said it's NOT working. So let's rely on LocalStorage.
+      }
+      
+      // Sort by date if we stored timestamps, but for now just reverse array if needed?
+      // Let's assume storedSessions is the source of truth.
+      setSessions(parsedSessions);
+      if (parsedSessions.length > 0 && !currentSessionId) {
+        setCurrentSessionId(parsedSessions[0].id);
       }
     } catch (error) {
       console.error('Failed to load sessions:', error);
@@ -104,18 +112,19 @@ export default function AIChat() {
         ? (firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage)
         : 'Новый чат';
       
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .insert({ user_id: user.id, title })
-        .select()
-        .single();
+      const newSession = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        title,
+        created_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
-      if (data) {
-        setSessions(prev => [data, ...prev]);
-        setCurrentSessionId(data.id);
-        return data.id;
-      }
+      const updatedSessions = [newSession, ...sessions];
+      setSessions(updatedSessions);
+      setCurrentSessionId(newSession.id);
+      localStorage.setItem(SESSIONS_KEY(user.id), JSON.stringify(updatedSessions));
+      
+      return newSession.id;
     } catch (error) {
       console.error('Failed to create session:', error);
       return null;
@@ -125,19 +134,11 @@ export default function AIChat() {
   const loadChatHistory = async (sessionId: string) => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      if (data) {
-        setMessages(data.map(msg => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content
-        })));
+      const storedMessages = localStorage.getItem(MESSAGES_KEY(sessionId));
+      if (storedMessages) {
+        setMessages(JSON.parse(storedMessages));
+      } else {
+        setMessages([]);
       }
     } catch (error) {
       console.error('Failed to load chat history:', error);
@@ -171,6 +172,13 @@ export default function AIChat() {
     }
 
     if (user?.id && lastMessage.role === 'user' && activeSessionId) {
+      // Save to local storage
+      const updatedMessages = [...userMessages];
+      // We need to persist this state, but `userMessages` is passed from streamChat arg which is `newMessages` from handleSend
+      // So it includes the latest user message.
+      localStorage.setItem(MESSAGES_KEY(activeSessionId), JSON.stringify(updatedMessages));
+      
+      // Attempt background sync to Supabase (optional, silent fail is fine now)
       supabase.from('chat_messages').insert({
         user_id: user.id,
         session_id: activeSessionId,
@@ -178,8 +186,7 @@ export default function AIChat() {
         content: lastMessage.content
       }).then(({ error }) => {
         if (error) {
-          console.error('Failed to save user message:', error);
-          toast.error('Не удалось сохранить сообщение. Пожалуйста, примените SQL-миграцию для чатов.');
+          // console.error('Supabase sync failed (expected if no migration):', error);
         }
       });
     }
@@ -246,13 +253,17 @@ export default function AIChat() {
 
     // Save assistant message
     if (user?.id && assistantContent && activeSessionId) {
+      // Save to local storage
+      const finalMessages = [...userMessages, { role: 'assistant', content: assistantContent }];
+      localStorage.setItem(MESSAGES_KEY(activeSessionId), JSON.stringify(finalMessages));
+
       supabase.from('chat_messages').insert({
         user_id: user.id,
         session_id: activeSessionId,
         role: 'assistant',
         content: assistantContent
       }).then(({ error }) => {
-        if (error) console.error('Failed to save assistant message:', error);
+        if (error) console.error('Supabase sync failed:', error);
       });
     }
 

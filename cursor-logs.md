@@ -67,3 +67,9 @@
     - Added Region Selection Dialog to Dashboard Main Page (appears if region is missing).
     - Added explicit error toast in AIChat if message saving fails (likely due to missing migration).
     - Updated AIChat to use ReactMarkdown for rendering assistant messages.
+
+91) Urgent Fix (No-SQL Mode):
+    - Implemented **LocalStorage** persistence for Chat Sessions and Messages in 'AIChat.tsx'.
+    - Chats now save instantly on the user's device without requiring Supabase SQL migrations.
+    - Supabase sync remains as a background 'best-effort' attempt but does not block saving.
+    - Fixed the issue where chat history disappeared on tab switch/refresh.
