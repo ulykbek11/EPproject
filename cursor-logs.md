@@ -49,3 +49,14 @@
         - Added Region Filter to 'Universities.tsx' (North America, Europe, Asia, CIS).
         - Created SQL migration file 'supabase/migrations/20251224_fix_exams_decimal.sql' for IELTS fractional scores.
         - Enhanced error messages in 'Exams.tsx' to guide user if DB migration is missing.
+
+89) Fixes & Improvements:
+    - Fixed 'supabase is not defined' error in 'AIChat.tsx' by adding missing import.
+    - Implemented Chat Sessions (ChatGPT-like):
+        - Created 'chat_sessions' table.
+        - Updated 'AIChat.tsx' to include sidebar with sessions and 'New Chat' button.
+        - Modified 'chat_messages' to link to sessions.
+    - Added Region Selection to Landing Page:
+        - Added a button/dialog on 'Landing.tsx' to select region (CIS, Europe, etc.).
+        - Saves selection to 'profiles' table for AI context accuracy.
+    - Created SQL migration 'supabase/migrations/20251224_chat_sessions.sql'.

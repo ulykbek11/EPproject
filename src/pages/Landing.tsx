@@ -9,8 +9,15 @@ import {
   Search,
   ArrowRight,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Globe2
 } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const features = [
   {
@@ -53,6 +60,33 @@ const benefits = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [isRegionDialogOpen, setIsRegionDialogOpen] = useState(false);
+
+  const handleRegionSave = async () => {
+    if (!user) {
+      toast.error('Пожалуйста, войдите в систему, чтобы сохранить регион');
+      return;
+    }
+    if (!selectedRegion) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ region: selectedRegion })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      toast.success('Регион успешно сохранен!');
+      setIsRegionDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving region:', error);
+      toast.error('Ошибка при сохранении региона');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -99,6 +133,43 @@ export default function Landing() {
               EduPath помогает выбрать университет, подготовиться к экзаменам и собрать 
               идеальное портфолио с помощью персонального ИИ-консультанта
             </p>
+
+            {/* Region Selection CTA */}
+            <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+               <Dialog open={isRegionDialogOpen} onOpenChange={setIsRegionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 rounded-full border-primary/20 hover:border-primary/50 bg-background/50 backdrop-blur-sm">
+                    <Globe2 className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Выберите ваш регион для точных рекомендаций ИИ</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Выберите ваш регион</DialogTitle>
+                    <DialogDescription>
+                      Это поможет ИИ-консультанту давать более точные советы, учитывая специфику поступления из вашего региона.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Выберите регион" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CIS">СНГ (Россия, Казахстан, Узбекистан и др.)</SelectItem>
+                        <SelectItem value="Europe">Европа</SelectItem>
+                        <SelectItem value="Asia">Азия</SelectItem>
+                        <SelectItem value="North America">Северная Америка</SelectItem>
+                        <SelectItem value="Other">Другой</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleRegionSave} className="w-full" disabled={!selectedRegion}>
+                      Сохранить и продолжить
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <Link to="/auth?mode=register">

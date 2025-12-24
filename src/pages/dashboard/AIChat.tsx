@@ -7,6 +7,7 @@ import { Send, Sparkles, User, Loader2, BookOpen, GraduationCap, FileText, Award
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { buildProfileContext } from '@/lib/aiContext';
 
 // Простая очистка Markdown-символов из ответа ассистента
@@ -56,19 +57,76 @@ export default function AIChat() {
   const inputRef = useRef<HTMLInputElement>(null);
   const { user, session } = useAuth();
 
+  const [sessions, setSessions] = useState<{ id: string; title: string }[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
   useEffect(() => {
     if (user) {
-      loadChatHistory();
+      loadSessions();
     }
   }, [user]);
 
-  const loadChatHistory = async () => {
+  useEffect(() => {
+    if (user && currentSessionId) {
+      loadChatHistory(currentSessionId);
+    } else {
+      setMessages([]);
+    }
+  }, [user, currentSessionId]);
+
+  const loadSessions = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setSessions(data);
+        if (data.length > 0 && !currentSessionId) {
+          setCurrentSessionId(data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    }
+  };
+
+  const createNewSession = async (firstMessage?: string) => {
+    if (!user) return null;
+    try {
+      const title = firstMessage 
+        ? (firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage)
+        : 'Новый чат';
+      
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({ user_id: user.id, title })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setSessions(prev => [data, ...prev]);
+        setCurrentSessionId(data.id);
+        return data.id;
+      }
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      return null;
+    }
+  };
+
+  const loadChatHistory = async (sessionId: string) => {
     if (!user) return;
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -103,9 +161,17 @@ export default function AIChat() {
 
     // Save user message
     const lastMessage = userMessages[userMessages.length - 1];
-    if (user?.id && lastMessage.role === 'user') {
+    
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      const newId = await createNewSession(lastMessage.content);
+      if (newId) activeSessionId = newId;
+    }
+
+    if (user?.id && lastMessage.role === 'user' && activeSessionId) {
       supabase.from('chat_messages').insert({
         user_id: user.id,
+        session_id: activeSessionId,
         role: 'user',
         content: lastMessage.content
       }).then(({ error }) => {
@@ -174,9 +240,10 @@ export default function AIChat() {
     }
 
     // Save assistant message
-    if (user?.id && assistantContent) {
+    if (user?.id && assistantContent && activeSessionId) {
       supabase.from('chat_messages').insert({
         user_id: user.id,
+        session_id: activeSessionId,
         role: 'assistant',
         content: assistantContent
       }).then(({ error }) => {
@@ -216,20 +283,55 @@ export default function AIChat() {
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)] flex flex-col max-w-4xl mx-auto animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 rounded-2xl gradient-accent flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-accent-foreground" />
-          </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold">ИИ-консультант</h1>
-            <p className="text-sm text-muted-foreground">Помощь с поступлением 24/7</p>
-          </div>
+      <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)] flex gap-4 max-w-7xl mx-auto animate-fade-in">
+        {/* Sidebar */}
+        <div className="w-64 flex-shrink-0 hidden md:flex flex-col gap-2 bg-card rounded-2xl border border-border p-3">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2 mb-2"
+            onClick={() => {
+              setCurrentSessionId(null);
+              setMessages([]);
+            }}
+          >
+            <Sparkles className="w-4 h-4" />
+            Новый чат
+          </Button>
+          <ScrollArea className="flex-1">
+            <div className="flex flex-col gap-1">
+              {sessions.map(session => (
+                <button
+                  key={session.id}
+                  onClick={() => setCurrentSessionId(session.id)}
+                  className={cn(
+                    "text-left px-3 py-2 rounded-md text-sm transition-colors truncate",
+                    currentSessionId === session.id 
+                      ? "bg-accent/10 text-accent font-medium" 
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {session.title}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
 
-        {/* Chat area */}
-        <div className="flex-1 bg-card rounded-2xl border border-border overflow-hidden flex flex-col">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl gradient-accent flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-accent-foreground" />
+            </div>
+            <div>
+              <h1 className="font-display text-2xl font-bold">ИИ-консультант</h1>
+              <p className="text-sm text-muted-foreground">Помощь с поступлением 24/7</p>
+            </div>
+          </div>
+
+          {/* Chat box */}
+          <div className="flex-1 bg-card rounded-2xl border border-border overflow-hidden flex flex-col">
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-8">
@@ -329,6 +431,7 @@ export default function AIChat() {
                 )}
               </Button>
             </div>
+          </div>
           </div>
         </div>
       </div>
