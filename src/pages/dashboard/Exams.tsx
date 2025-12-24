@@ -166,11 +166,18 @@ export default function Exams() {
                   <div>
                     <Label>Балл</Label>
                     <Input
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={formData.score}
-                      onChange={(e) => setFormData(prev => ({ ...prev, score: e.target.value }))}
-                      placeholder="85"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Allow digits, dots, and commas. 
+                        // Only update if it matches a partial number pattern or is empty
+                        if (val === '' || /^[0-9.,]+$/.test(val)) {
+                          setFormData(prev => ({ ...prev, score: val }));
+                        }
+                      }}
+                      placeholder="8.5"
                     />
                   </div>
                   <div>

@@ -28,3 +28,8 @@
     - Frontend (`GPA.tsx`):
         - Implemented automatic removal of subjects with "-" (0 grade) or "PASS" (NaN) upon saving.
         - This prevents 0 grades from skewing the GPA calculation and fixes "unable to save" issues caused by invalid grades.
+
+86) Exams Input Fix:
+    - Frontend (`Exams.tsx`):
+        - Changed "Score" input from `type="number"` to `type="text"` (with `inputMode="decimal"`).
+        - This fully enables typing decimal scores with commas (e.g., "8,5") or dots (e.g., "7.5") regardless of browser locale.
