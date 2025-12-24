@@ -60,3 +60,10 @@
         - Added a button/dialog on 'Landing.tsx' to select region (CIS, Europe, etc.).
         - Saves selection to 'profiles' table for AI context accuracy.
     - Created SQL migration 'supabase/migrations/20251224_chat_sessions.sql'.
+
+90) Fixes & Improvements:
+    - Installed 'react-markdown' and 'remark-gfm' for proper table rendering in AIChat.
+    - Removed Region Selection from Landing Page.
+    - Added Region Selection Dialog to Dashboard Main Page (appears if region is missing).
+    - Added explicit error toast in AIChat if message saving fails (likely due to missing migration).
+    - Updated AIChat to use ReactMarkdown for rendering assistant messages.

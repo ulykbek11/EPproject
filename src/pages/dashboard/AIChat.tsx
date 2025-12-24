@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { buildProfileContext } from '@/lib/aiContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Простая очистка Markdown-символов из ответа ассистента
 const sanitizeMarkdown = (text: string) => {
@@ -175,7 +177,10 @@ export default function AIChat() {
         role: 'user',
         content: lastMessage.content
       }).then(({ error }) => {
-        if (error) console.error('Failed to save user message:', error);
+        if (error) {
+          console.error('Failed to save user message:', error);
+          toast.error('Не удалось сохранить сообщение. Пожалуйста, примените SQL-миграцию для чатов.');
+        }
       });
     }
 
@@ -250,6 +255,8 @@ export default function AIChat() {
         if (error) console.error('Failed to save assistant message:', error);
       });
     }
+
+    setIsLoading(false);
   };
 
   const handleSend = async (text?: string) => {
@@ -380,9 +387,17 @@ export default function AIChat() {
                           : "bg-muted rounded-bl-md"
                       )}
                     >
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {message.role === 'assistant' ? sanitizeMarkdown(message.content) : message.content}
-                      </p>
+                      {message.role === 'assistant' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                          {message.content}
+                        </p>
+                      )}
                     </div>
                     {message.role === 'user' && (
                       <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">

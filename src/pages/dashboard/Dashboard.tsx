@@ -12,6 +12,11 @@ import {
   Sparkles,
   TrendingUp
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const quickActions = [
   {
@@ -46,9 +51,89 @@ export default function Dashboard() {
   const { user } = useAuth();
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'Пользователь';
 
+  const [isRegionDialogOpen, setIsRegionDialogOpen] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('');
+
+  useEffect(() => {
+    const checkRegion = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('region')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !data.region) {
+          setIsRegionDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error checking region:', error);
+      }
+    };
+    checkRegion();
+  }, [user]);
+
+  const handleRegionSave = async () => {
+    if (!user || !selectedRegion) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ region: selectedRegion })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      toast.success('Регион сохранен');
+      setIsRegionDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to save region:', error);
+      toast.error('Ошибка сохранения региона');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto animate-fade-in">
+        <Dialog open={isRegionDialogOpen} onOpenChange={(open) => {
+          // Prevent closing if region is strictly required, or allow closing
+          // For now, allow closing but maybe re-prompt later. 
+          // If we want to force it, we can check if region is set before allowing close.
+          if (!open && selectedRegion) {
+             setIsRegionDialogOpen(false);
+          } else if (!open) {
+             // Optional: allow closing without selection
+             setIsRegionDialogOpen(false);
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Добро пожаловать! Выберите ваш регион</DialogTitle>
+              <DialogDescription>
+                Чтобы ИИ-консультант мог давать точные рекомендации, укажите регион вашего проживания.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите регион" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CIS">СНГ (Россия, Казахстан, Узбекистан и др.)</SelectItem>
+                  <SelectItem value="Europe">Европа</SelectItem>
+                  <SelectItem value="Asia">Азия</SelectItem>
+                  <SelectItem value="North America">Северная Америка</SelectItem>
+                  <SelectItem value="Other">Другой</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleRegionSave} disabled={!selectedRegion} className="w-full">
+                Сохранить и продолжить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Welcome section */}
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">
