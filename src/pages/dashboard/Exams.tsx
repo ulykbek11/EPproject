@@ -86,8 +86,8 @@ export default function Exams() {
       setFormData({ exam_name: '', score: '', max_score: '100', notes: '' });
       setDialogOpen(false);
       loadExams();
-    } catch (error) {
-      toast.error('Ошибка сохранения');
+    } catch (error: any) {
+      toast.error('Ошибка сохранения: ' + (error.message || 'Неизвестная ошибка'));
       console.error(error);
     } finally {
       setSaving(false);

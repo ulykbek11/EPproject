@@ -35,3 +35,10 @@
         - This fully enables typing decimal scores with commas (e.g., "8,5") or dots (e.g., "7.5") regardless of browser locale.
     - Database:
         - Updated `exams` table schema to change `score` and `max_score` columns from `INTEGER` to `DECIMAL(5,2)` to support fractional grades.
+
+87) Exams Score Type Fix (Follow-up):
+    - Frontend (Exams.tsx):
+        - Improved error handling to show specific database errors in toast notifications.
+    - Database:
+        - Re-verified need for DECIMAL(5,2) on exams.score and exams.max_score.
+        - Provided SQL fix to user for manual application if migration failed.
