@@ -42,3 +42,10 @@
     - Database:
         - Re-verified need for DECIMAL(5,2) on exams.score and exams.max_score.
         - Provided SQL fix to user for manual application if migration failed.
+
+88) Chat History & Region Filter:
+    - Features:
+        - Implemented Chat History saving in 'AIChat.tsx' using 'chat_messages' table.
+        - Added Region Filter to 'Universities.tsx' (North America, Europe, Asia, CIS).
+        - Created SQL migration file 'supabase/migrations/20251224_fix_exams_decimal.sql' for IELTS fractional scores.
+        - Enhanced error messages in 'Exams.tsx' to guide user if DB migration is missing.

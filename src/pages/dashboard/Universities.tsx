@@ -47,6 +47,7 @@ export default function Universities() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('all'); // 'all', 'North America', 'Europe', 'Asia', 'CIS', 'Other'
   const [ratingFilter, setRatingFilter] = useState(false);
   
   // Rating state
@@ -157,10 +158,31 @@ export default function Universities() {
       (uni.programs && JSON.stringify(uni.programs).toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCountry = !countryFilter || uni.country.toLowerCase().includes(countryFilter.toLowerCase());
+
+    // Simple region mapping
+    let matchesRegion = true;
+    if (regionFilter !== 'all') {
+      const country = uni.country.toLowerCase();
+      if (regionFilter === 'North America') {
+        matchesRegion = ['usa', 'canada', 'сша', 'канада'].some(c => country.includes(c));
+      } else if (regionFilter === 'Europe') {
+        matchesRegion = ['uk', 'germany', 'switzerland', 'france', 'italy', 'netherlands', 'sweden', 'великобритания', 'германия', 'швейцария', 'франция'].some(c => country.includes(c));
+      } else if (regionFilter === 'Asia') {
+        matchesRegion = ['singapore', 'korea', 'china', 'japan', 'hong kong', 'сингапур', 'корея', 'китай', 'япония'].some(c => country.includes(c));
+      } else if (regionFilter === 'CIS') {
+        matchesRegion = ['russia', 'kazakhstan', 'belarus', 'россия', 'казахстан'].some(c => country.includes(c));
+      } else {
+         // Other or specific mapping missed - strictly speaking we should have a region column in DB
+         // For now, if it doesn't match above, it might be Other. 
+         // But let's keep it simple: if selected region is Other, show those NOT in above lists?
+         // Let's just assume we only support these 4 major regions for now in the filter.
+         matchesRegion = false;
+      }
+    }
     
     const matchesRating = !ratingFilter || (studentRating !== null && uni.min_rating !== null && studentRating >= uni.min_rating);
     
-    return matchesSearch && matchesCountry && matchesRating;
+    return matchesSearch && matchesCountry && matchesRegion && matchesRating;
   });
 
   return (
@@ -243,9 +265,22 @@ export default function Universities() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              
+              <select 
+                className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:w-40"
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+              >
+                <option value="all">Все регионы</option>
+                <option value="North America">Сев. Америка</option>
+                <option value="Europe">Европа</option>
+                <option value="Asia">Азия</option>
+                <option value="CIS">СНГ</option>
+              </select>
+
               <Input 
                 placeholder="Страна" 
-                className="md:w-48" 
+                className="md:w-40" 
                 value={countryFilter}
                 onChange={(e) => setCountryFilter(e.target.value)}
               />

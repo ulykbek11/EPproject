@@ -80,7 +80,12 @@ export default function Exams() {
         notes: formData.notes || null
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('invalid input syntax for type integer')) {
+           throw new Error('База данных ожидает целое число. Пожалуйста, примените SQL-миграцию для поддержки дробных чисел.');
+        }
+        throw error;
+      }
 
       toast.success('Экзамен добавлен');
       setFormData({ exam_name: '', score: '', max_score: '100', notes: '' });

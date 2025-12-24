@@ -57,6 +57,34 @@ export default function AIChat() {
   const { user, session } = useAuth();
 
   useEffect(() => {
+    if (user) {
+      loadChatHistory();
+    }
+  }, [user]);
+
+  const loadChatHistory = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      if (data) {
+        setMessages(data.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  };
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -71,6 +99,18 @@ export default function AIChat() {
       }
     } catch (err) {
       console.warn('Failed to build profile context:', err);
+    }
+
+    // Save user message
+    const lastMessage = userMessages[userMessages.length - 1];
+    if (user?.id && lastMessage.role === 'user') {
+      supabase.from('chat_messages').insert({
+        user_id: user.id,
+        role: 'user',
+        content: lastMessage.content
+      }).then(({ error }) => {
+        if (error) console.error('Failed to save user message:', error);
+      });
     }
 
     const response = await fetch(`/api/ai-chat`, {
@@ -131,6 +171,17 @@ export default function AIChat() {
           break;
         }
       }
+    }
+
+    // Save assistant message
+    if (user?.id && assistantContent) {
+      supabase.from('chat_messages').insert({
+        user_id: user.id,
+        role: 'assistant',
+        content: assistantContent
+      }).then(({ error }) => {
+        if (error) console.error('Failed to save assistant message:', error);
+      });
     }
   };
 
