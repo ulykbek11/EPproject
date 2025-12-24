@@ -21,3 +21,10 @@
         - Added Search functionality with filters for Country and Rating.
         - Added "Calculate Rating" button and display.
         - Added display of grants and programs in university cards.
+
+85) GPA Calculator Fixes:
+    - Backend (Supabase Function):
+        - Switched to `gemini-flash-lite-latest` to resolve quota errors.
+    - Frontend (`GPA.tsx`):
+        - Implemented automatic removal of subjects with "-" (0 grade) or "PASS" (NaN) upon saving.
+        - This prevents 0 grades from skewing the GPA calculation and fixes "unable to save" issues caused by invalid grades.

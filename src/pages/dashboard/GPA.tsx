@@ -69,9 +69,15 @@ export default function GPA() {
       if (deleteError) throw deleteError;
 
       // 2. Insert current records
-      const validRecords = records.filter(r => r.subject.trim() !== '');
+      // Filter out empty subjects AND grades that are 0 (which represent "-" or empty)
+      // The user requested to automatically remove subjects with "-" (0 grade) upon saving
+      const validRecords = records.filter(r => r.subject.trim() !== '' && r.grade > 0);
+      
       if (validRecords.length === 0) {
-        toast.success('Записи очищены');
+        // If all records were removed (e.g. all were 0), we still want to clear the DB
+        // The delete above already did that.
+        toast.success('Записи обновлены (пустые удалены)');
+        loadRecords();
         return;
       }
 
@@ -207,11 +213,14 @@ export default function GPA() {
 
         if (Array.isArray(subjects)) {
             // Merge with existing empty records or replace if only one empty record exists
-            const newRecords = subjects.map((item: any) => ({
-                subject: item.name || item.subject, // Map 'name' from new format to 'subject'
-                grade: Number(item.grade),
-                credits: 1 // Default credit
-            }));
+            const newRecords = subjects.map((item: any) => {
+                const numGrade = Number(item.grade);
+                return {
+                    subject: item.name || item.subject, // Map 'name' from new format to 'subject'
+                    grade: isNaN(numGrade) ? 0 : numGrade, // Handle "PASS" or other non-numbers as 0
+                    credits: 1 // Default credit
+                };
+            });
 
             if (records.length === 1 && records[0].subject === '' && records[0].grade === 0) {
                 setRecords(newRecords);
