@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { calculateStudentRating } from '@/lib/rating';
+import { UniversityLogo } from '@/components/UniversityLogo';
 
 interface SavedUniversity {
   id: string;
