@@ -413,7 +413,7 @@ export default function Universities() {
                       <div className="flex justify-between items-start">
                         <div className="flex gap-4">
                           <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            {uni.logo_url ? <img src={uni.logo_url} alt={uni.name} className="w-8 h-8 object-contain" /> : <GraduationCap className="w-6 h-6 text-primary" />}
+                            <UniversityLogo url={uni.logo_url} name={uni.name} website={uni.website} />
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2 mb-1">
