@@ -191,22 +191,18 @@ export default function AIChat() {
       });
     }
 
-    const response = await fetch(`/api/ai-chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ messages: userMessages, profileContext }),
+    const { data, error } = await supabase.functions.invoke('ai-chat', {
+      body: { messages: userMessages, profileContext },
+      responseType: 'stream',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Ошибка при отправке сообщения');
+    if (error) {
+      throw new Error(error.message || 'Ошибка при отправке сообщения');
     }
 
-    if (!response.body) throw new Error('No response body');
+    if (!data) throw new Error('No response body');
 
-    const reader = response.body.getReader();
+    const reader = data.getReader();
     const decoder = new TextDecoder();
     let textBuffer = '';
     let assistantContent = '';

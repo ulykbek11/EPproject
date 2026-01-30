@@ -6,7 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Trash2, Loader2, ExternalLink, MapPin, GraduationCap, Star, Sparkles, Filter, Globe } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Plus, Trash2, Loader2, ExternalLink, MapPin, GraduationCap, Star, Sparkles, Filter, Globe, DollarSign, BookOpen, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,7 +39,16 @@ interface DirectoryUniversity {
   programs: any;
   grants_info: string | null;
   scholarships_info: string | null;
+  type?: 'Public' | 'Private';
+  tags?: string[];
+  tuition_min?: number;
+  tuition_max?: number;
+  currency?: string;
+  has_scholarships?: boolean;
+  languages?: string[];
 }
+
+const AVAILABLE_TAGS = ['IT', 'Medicine', 'Business', 'Arts', 'Engineering', 'Science', 'Law', 'Design'];
 
 export default function Universities() {
   const { user } = useAuth();
@@ -47,8 +61,16 @@ export default function Universities() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
-  const [regionFilter, setRegionFilter] = useState('all'); // 'all', 'North America', 'Europe', 'Asia', 'CIS', 'Other'
+  const [regionFilter, setRegionFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // New Filters
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [tagsFilter, setTagsFilter] = useState<string[]>([]);
+  const [scholarshipFilter, setScholarshipFilter] = useState(false);
+  const [maxTuition, setMaxTuition] = useState<number>(100000);
+  const [languageFilter, setLanguageFilter] = useState<string>('all');
   
   // Rating state
   const [studentRating, setStudentRating] = useState<number | null>(null);
@@ -182,8 +204,18 @@ export default function Universities() {
     
     const matchesRating = !ratingFilter || (studentRating !== null && uni.min_rating !== null && studentRating >= uni.min_rating);
     
-    return matchesSearch && matchesCountry && matchesRegion && matchesRating;
+    const matchesType = typeFilter === 'all' || uni.type === typeFilter;
+    const matchesTags = tagsFilter.length === 0 || (uni.tags && tagsFilter.some(tag => uni.tags?.includes(tag))); // some or every? usually OR logic for tags, but user said "critical for filters", usually implies "contains at least one". Let's use some.
+    const matchesScholarship = !scholarshipFilter || uni.has_scholarships;
+    const matchesTuition = !uni.tuition_min || uni.tuition_min <= maxTuition;
+    const matchesLanguage = languageFilter === 'all' || (uni.languages && uni.languages.includes(languageFilter));
+
+    return matchesSearch && matchesCountry && matchesRegion && matchesRating && matchesType && matchesTags && matchesScholarship && matchesTuition && matchesLanguage;
   });
+
+  const toggleTag = (tag: string) => {
+    setTagsFilter(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
 
   return (
     <DashboardLayout>
@@ -290,10 +322,82 @@ export default function Universities() {
                 className="gap-2"
                 disabled={studentRating === null}
               >
-                <Filter className="w-4 h-4" />
+                <Star className="w-4 h-4" />
                 Подходящие мне
               </Button>
+              <Button
+                variant={showFilters ? "secondary" : "outline"}
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                Фильтры
+              </Button>
             </div>
+
+            {/* Extended Filters */}
+            {showFilters && (
+              <Card className="p-4 bg-muted/30">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Тип университета</Label>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger><SelectValue placeholder="Любой" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Любой</SelectItem>
+                        <SelectItem value="Public">Государственный</SelectItem>
+                        <SelectItem value="Private">Частный</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Язык обучения</Label>
+                    <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                      <SelectTrigger><SelectValue placeholder="Любой" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Любой</SelectItem>
+                        <SelectItem value="English">Английский</SelectItem>
+                        <SelectItem value="German">Немецкий</SelectItem>
+                        <SelectItem value="French">Французский</SelectItem>
+                        <SelectItem value="Chinese">Китайский</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Стоимость до: {maxTuition.toLocaleString()} USD</Label>
+                    <Slider 
+                      value={[maxTuition]} 
+                      onValueChange={(v) => setMaxTuition(v[0])} 
+                      max={100000} 
+                      step={1000} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="block mb-2">Направления</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {AVAILABLE_TAGS.map(tag => (
+                        <Badge 
+                          key={tag} 
+                          variant={tagsFilter.includes(tag) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-8">
+                    <Switch id="scholarship" checked={scholarshipFilter} onCheckedChange={setScholarshipFilter} />
+                    <Label htmlFor="scholarship">Только со стипендиями</Label>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <div className="grid gap-4">
               {filteredUniversities.length === 0 ? (
@@ -310,11 +414,18 @@ export default function Universities() {
                             {uni.logo_url ? <img src={uni.logo_url} alt={uni.name} className="w-8 h-8 object-contain" /> : <GraduationCap className="w-6 h-6 text-primary" />}
                           </div>
                           <div>
-                            <CardTitle className="text-xl">{uni.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 mt-1">
-                              <MapPin className="w-3 h-3" /> {uni.city}, {uni.country}
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <CardTitle className="text-xl">{uni.name}</CardTitle>
+                              {uni.type && <Badge variant="secondary" className="text-xs h-5">{uni.type === 'Public' ? 'Гос.' : 'Частный'}</Badge>}
+                              {uni.has_scholarships && <Badge variant="outline" className="text-xs h-5 border-green-500 text-green-600 bg-green-50">Стипендии</Badge>}
+                            </div>
+                            <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {uni.city}, {uni.country}</span>
+                              {uni.languages && uni.languages.length > 0 && (
+                                <span className="flex items-center gap-1"><Languages className="w-3 h-3" /> {uni.languages.join(', ')}</span>
+                              )}
                               {uni.website && (
-                                <a href={uni.website} target="_blank" rel="noopener noreferrer" className="ml-2 flex items-center gap-1 text-primary hover:underline">
+                                <a href={uni.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
                                   <Globe className="w-3 h-3" /> Сайт
                                 </a>
                               )}
@@ -330,11 +441,22 @@ export default function Universities() {
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <p className="text-sm text-muted-foreground">{uni.description}</p>
-                          <div className="flex gap-4 text-sm">
-                            <div className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
-                              Min GPA: {uni.min_gpa || 'N/A'}
+                          
+                          {uni.tags && uni.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {uni.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>)}
                             </div>
-                            <div className={`px-3 py-1 rounded-full font-medium border ${
+                          )}
+
+                          <div className="flex flex-wrap gap-3 text-sm">
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/50 font-medium whitespace-nowrap">
+                                <DollarSign className="w-3.5 h-3.5" />
+                                {uni.tuition_min !== undefined ? `${uni.tuition_min.toLocaleString()} ${uni.currency || 'USD'}` : 'N/A'}
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground font-medium whitespace-nowrap">
+                              GPA: {uni.min_gpa || 'N/A'}
+                            </div>
+                            <div className={`px-3 py-1 rounded-full font-medium border whitespace-nowrap ${
                                studentRating && uni.min_rating && studentRating >= uni.min_rating 
                                 ? 'bg-green-100 text-green-700 border-green-200' 
                                 : 'bg-secondary text-secondary-foreground border-transparent'
