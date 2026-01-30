@@ -190,8 +190,10 @@ export default function Universities() {
       } else if (regionFilter === 'Europe') {
         matchesRegion = ['uk', 'germany', 'switzerland', 'france', 'italy', 'netherlands', 'sweden', 'великобритания', 'германия', 'швейцария', 'франция'].some(c => country.includes(c));
       } else if (regionFilter === 'Asia') {
-        matchesRegion = ['singapore', 'korea', 'china', 'japan', 'hong kong', 'сингапур', 'корея', 'китай', 'япония'].some(c => country.includes(c));
-      } else if (regionFilter === 'CIS') {
+      matchesRegion = ['singapore', 'korea', 'china', 'japan', 'hong kong', 'сингапур', 'корея', 'китай', 'япония'].some(c => country.includes(c));
+    } else if (regionFilter === 'Australia') {
+      matchesRegion = ['australia', 'new zealand', 'австралия', 'новая зеландия'].some(c => country.includes(c));
+    } else if (regionFilter === 'CIS') {
         matchesRegion = ['russia', 'kazakhstan', 'belarus', 'россия', 'казахстан'].some(c => country.includes(c));
       } else {
          // Other or specific mapping missed - strictly speaking we should have a region column in DB
