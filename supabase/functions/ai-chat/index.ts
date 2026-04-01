@@ -121,15 +121,15 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("Gemini API error:", response.status, errorText);
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Слишком много запросов. Подождите немного." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+      // Return the exact error so the frontend can see it instead of a generic 500
       return new Response(
-        JSON.stringify({ error: "Ошибка AI сервиса", details: errorText }),
+        JSON.stringify({ 
+          error: "Gemini API Error", 
+          status: response.status, 
+          details: errorText,
+          // Let's also return what we tried to send for debugging
+          sentContents: contents
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

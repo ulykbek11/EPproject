@@ -197,6 +197,20 @@ export default function AIChat() {
     });
 
     if (error) {
+      // Log the full raw error object for debugging in browser console
+      console.error("Raw Edge Function Error:", error);
+      console.error("Context:", (error as any).context);
+      
+      try {
+        if ((error as any).context?.json) {
+          const details = await (error as any).context.json();
+          console.error("Detailed Edge Function Error JSON:", details);
+          throw new Error(details.details ? `API Error: ${details.details}` : details.error);
+        }
+      } catch (e) {
+        console.error("Failed to parse error context as JSON", e);
+      }
+      
       throw new Error(error.message || 'Ошибка при отправке сообщения');
     }
 
