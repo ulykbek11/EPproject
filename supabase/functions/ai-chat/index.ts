@@ -72,11 +72,32 @@ serve(async (req) => {
       systemInstruction += `\n\nДанные профиля пользователя:\n${profileContext}`;
     }
 
-    // Map OpenAI-style messages to Gemini format
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    // Map OpenAI-style messages to Gemini format and ensure strict alternating roles (user -> model -> user)
+    const contents: any[] = [];
+    
+    // Process messages sequentially, merging consecutive messages of the same role
+    messages.forEach((msg: any) => {
+      const role = msg.role === 'user' ? 'user' : 'model';
+      
+      if (contents.length > 0 && contents[contents.length - 1].role === role) {
+        // Merge with previous if same role
+        contents[contents.length - 1].parts[0].text += `\n\n${msg.content}`;
+      } else {
+        // Push new if different role
+        contents.push({
+          role: role,
+          parts: [{ text: msg.content }]
+        });
+      }
+    });
+
+    // Gemini API requires the first message to be from 'user'
+    if (contents.length > 0 && contents[0].role !== 'user') {
+      contents.unshift({
+        role: 'user',
+        parts: [{ text: 'Привет!' }]
+      });
+    }
 
     // Use a standard model
     const model = "gemini-1.5-flash"; 

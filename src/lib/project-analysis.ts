@@ -60,27 +60,21 @@ export const analyzeProject = async (
       }
     `;
 
-    const response = await fetch('/api/ai-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+    const { data, error: invokeError } = await supabase.functions.invoke('ai-chat', {
+      body: { 
         messages: [{ role: 'user', content: "Analyze this project based on the benchmarks and criteria provided." }],
         systemPrompt: prompt,
-      }),
+      },
+      responseType: 'stream',
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.details || errorData.error || 'AI service error');
+    if (invokeError) {
+      throw new Error(invokeError.message || 'AI service error');
     }
     
-    // Simple response parsing (assuming non-streaming for simplicity in this helper, 
-    // but the API is streaming. I need to handle stream like in rating.ts)
-    // Actually, I should reuse the stream handling logic.
-    
-    if (!response.body) throw new Error('No response body');
+    if (!data) throw new Error('No response body');
 
-    const reader = response.body.getReader();
+    const reader = data.getReader();
     const decoder = new TextDecoder();
     let textBuffer = '';
     let fullResponse = '';
