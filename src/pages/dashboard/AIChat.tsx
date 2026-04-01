@@ -215,31 +215,13 @@ export default function AIChat() {
 
     if (!data) throw new Error('No response body');
 
+    console.log("RAW DATA FROM SUPABASE:", data);
+
     let assistantContent = '';
 
-    // Since we are not using true SSE streaming from the Supabase client anymore,
-    // the data is returned directly as a parsed object or string containing the SSE format.
-    // Let's parse it safely depending on what the Edge Function returns.
-    if (typeof data === 'string') {
-      // The Edge Function returns SSE strings like "data: { ... }\n\ndata: [DONE]\n\n"
-      const lines = data.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-          try {
-            const jsonStr = line.slice(6).trim();
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.message?.content || parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
-            }
-          } catch (e) {
-            console.error("Failed to parse SSE line", line, e);
-          }
-        }
-      }
-    } else if (data.choices && data.choices[0]) {
-      // Just in case it gets parsed automatically as JSON
-      assistantContent = data.choices[0].message?.content || data.choices[0].delta?.content || '';
+    // The data is now a standard JSON object returned by the Edge Function
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      assistantContent = data.choices[0].message.content;
     }
 
     if (!assistantContent) {

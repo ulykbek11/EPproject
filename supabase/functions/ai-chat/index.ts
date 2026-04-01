@@ -137,23 +137,20 @@ serve(async (req) => {
     const data = await response.json();
     const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Извините, не удалось сгенерировать ответ.";
 
-    // Format as SSE stream to satisfy the client parser
-    // We send one big chunk simulating a stream
-    const jsonResponse = JSON.stringify({ 
-      choices: [{ 
-        delta: { content: generatedText },
-        message: { content: generatedText }
-      }] 
-    });
-
-    const sseString = `data: ${jsonResponse}\n\ndata: [DONE]\n\n`;
-
-    return new Response(sseString, {
-      headers: { 
-        ...corsHeaders, 
-        "Content-Type": "text/event-stream" 
+    // Return simple JSON instead of an SSE stream string
+    return new Response(
+      JSON.stringify({ 
+        choices: [{ 
+          message: { content: generatedText }
+        }] 
+      }),
+      {
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        }
       }
-    });
+    );
 
   } catch (error) {
     console.error("Chat error:", error);
