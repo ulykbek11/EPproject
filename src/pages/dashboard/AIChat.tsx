@@ -193,7 +193,6 @@ export default function AIChat() {
 
     const { data, error } = await supabase.functions.invoke('ai-chat', {
       body: { messages: userMessages, profileContext },
-      responseType: 'stream',
     });
 
     if (error) {
@@ -216,50 +215,47 @@ export default function AIChat() {
 
     if (!data) throw new Error('No response body');
 
-    const reader = data.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = '';
     let assistantContent = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      textBuffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') break;
-
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            assistantContent += content;
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last?.role === 'assistant') {
-                return prev.map((m, i) => 
-                  i === prev.length - 1 ? { ...m, content: assistantContent } : m
-                );
-              }
-              return [...prev, { role: 'assistant', content: assistantContent }];
-            });
+    // Since we are not using true SSE streaming from the Supabase client anymore,
+    // the data is returned directly as a parsed object or string containing the SSE format.
+    // Let's parse it safely depending on what the Edge Function returns.
+    if (typeof data === 'string') {
+      // The Edge Function returns SSE strings like "data: { ... }\n\ndata: [DONE]\n\n"
+      const lines = data.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const jsonStr = line.slice(6).trim();
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.message?.content || parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+            }
+          } catch (e) {
+            console.error("Failed to parse SSE line", line, e);
           }
-        } catch {
-          textBuffer = line + '\n' + textBuffer;
-          break;
         }
       }
+    } else if (data.choices && data.choices[0]) {
+      // Just in case it gets parsed automatically as JSON
+      assistantContent = data.choices[0].message?.content || data.choices[0].delta?.content || '';
     }
+
+    if (!assistantContent) {
+      assistantContent = "Извините, произошла ошибка при получении ответа.";
+    }
+
+    // Update messages state with the final answer
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last?.role === 'assistant') {
+        return prev.map((m, i) => 
+          i === prev.length - 1 ? { ...m, content: assistantContent } : m
+        );
+      }
+      return [...prev, { role: 'assistant', content: assistantContent }];
+    });
 
     // Save assistant message
     if (user?.id && assistantContent && activeSessionId) {
