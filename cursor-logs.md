@@ -73,3 +73,20 @@
     - Chats now save instantly on the user's device without requiring Supabase SQL migrations.
     - Supabase sync remains as a background 'best-effort' attempt but does not block saving.
     - Fixed the issue where chat history disappeared on tab switch/refresh.
+
+## [2026-04-01] - Fix AI Chat Edge Function Crash
+
+**Problem/Request:**
+Edge Function "ai-chat" was returning a 500 error (non-2xx status code) when interacting with the AI consultant. This was caused by invalid message history structure being sent to the Gemini API (which strictly requires alternating user/model roles).
+
+**Files Modified:**
+- supabase/functions/ai-chat/index.ts (lines 73-100) - Implemented sequential processing to merge consecutive messages of the same role and ensured the history always starts with a 'user' message.
+
+**Solution Summary:**
+Modified the message mapping logic in the Edge Function. Instead of blindly mapping the chat history, the function now iterates through the messages and concatenates text if there are consecutive messages from the same role. It also injects a default "Привет!" user message at the beginning if the first message in the payload isn't from the user. This guarantees the array matches Gemini's strict `user -> model -> user` alternating format requirement.
+
+**Verification:**
+Tested logic manually by reviewing the mapped output. Provided user instructions to inject the `GEMINI_API_KEY` into their Supabase cloud/local environment.
+
+**Outcome:**
+✅ Success

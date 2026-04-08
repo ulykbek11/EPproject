@@ -72,14 +72,35 @@ serve(async (req) => {
       systemInstruction += `\n\nДанные профиля пользователя:\n${profileContext}`;
     }
 
-    // Map OpenAI-style messages to Gemini format
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    // Map OpenAI-style messages to Gemini format and ensure strict alternating roles (user -> model -> user)
+    const contents: any[] = [];
+    
+    // Process messages sequentially, merging consecutive messages of the same role
+    messages.forEach((msg: any) => {
+      const role = msg.role === 'user' ? 'user' : 'model';
+      
+      if (contents.length > 0 && contents[contents.length - 1].role === role) {
+        // Merge with previous if same role
+        contents[contents.length - 1].parts[0].text += `\n\n${msg.content}`;
+      } else {
+        // Push new if different role
+        contents.push({
+          role: role,
+          parts: [{ text: msg.content }]
+        });
+      }
+    });
+
+    // Gemini API requires the first message to be from 'user'
+    if (contents.length > 0 && contents[0].role !== 'user') {
+      contents.unshift({
+        role: 'user',
+        parts: [{ text: 'Привет!' }]
+      });
+    }
 
     // Use a standard model
-    const model = "gemini-1.5-flash"; 
+    const model = "gemini-2.5-flash"; 
     
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -100,15 +121,15 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("Gemini API error:", response.status, errorText);
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Слишком много запросов. Подождите немного." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+      // Return the exact error so the frontend can see it instead of a generic 500
       return new Response(
-        JSON.stringify({ error: "Ошибка AI сервиса", details: errorText }),
+        JSON.stringify({ 
+          error: "Gemini API Error", 
+          status: response.status, 
+          details: errorText,
+          // Let's also return what we tried to send for debugging
+          sentContents: contents
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -116,23 +137,20 @@ serve(async (req) => {
     const data = await response.json();
     const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Извините, не удалось сгенерировать ответ.";
 
-    // Format as SSE stream to satisfy the client parser
-    // We send one big chunk simulating a stream
-    const jsonResponse = JSON.stringify({ 
-      choices: [{ 
-        delta: { content: generatedText },
-        message: { content: generatedText }
-      }] 
-    });
-
-    const sseString = `data: ${jsonResponse}\n\ndata: [DONE]\n\n`;
-
-    return new Response(sseString, {
-      headers: { 
-        ...corsHeaders, 
-        "Content-Type": "text/event-stream" 
+    // Return simple JSON instead of an SSE stream string
+    return new Response(
+      JSON.stringify({ 
+        choices: [{ 
+          message: { content: generatedText }
+        }] 
+      }),
+      {
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        }
       }
-    });
+    );
 
   } catch (error) {
     console.error("Chat error:", error);

@@ -193,59 +193,51 @@ export default function AIChat() {
 
     const { data, error } = await supabase.functions.invoke('ai-chat', {
       body: { messages: userMessages, profileContext },
-      responseType: 'stream',
     });
 
     if (error) {
+      // Log the full raw error object for debugging in browser console
+      console.error("Raw Edge Function Error:", error);
+      console.error("Context:", (error as any).context);
+      
+      try {
+        if ((error as any).context?.json) {
+          const details = await (error as any).context.json();
+          console.error("Detailed Edge Function Error JSON:", details);
+          throw new Error(details.details ? `API Error: ${details.details}` : details.error);
+        }
+      } catch (e) {
+        console.error("Failed to parse error context as JSON", e);
+      }
+      
       throw new Error(error.message || 'Ошибка при отправке сообщения');
     }
 
     if (!data) throw new Error('No response body');
 
-    const reader = data.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = '';
+    console.log("RAW DATA FROM SUPABASE:", data);
+
     let assistantContent = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      textBuffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') break;
-
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            assistantContent += content;
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last?.role === 'assistant') {
-                return prev.map((m, i) => 
-                  i === prev.length - 1 ? { ...m, content: assistantContent } : m
-                );
-              }
-              return [...prev, { role: 'assistant', content: assistantContent }];
-            });
-          }
-        } catch {
-          textBuffer = line + '\n' + textBuffer;
-          break;
-        }
-      }
+    // The data is now a standard JSON object returned by the Edge Function
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      assistantContent = data.choices[0].message.content;
     }
+
+    if (!assistantContent) {
+      assistantContent = "Извините, произошла ошибка при получении ответа.";
+    }
+
+    // Update messages state with the final answer
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last?.role === 'assistant') {
+        return prev.map((m, i) => 
+          i === prev.length - 1 ? { ...m, content: assistantContent } : m
+        );
+      }
+      return [...prev, { role: 'assistant', content: assistantContent }];
+    });
 
     // Save assistant message
     if (user?.id && assistantContent && activeSessionId) {

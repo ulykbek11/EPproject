@@ -43,23 +43,22 @@ export const calculateStudentRating = async (userId: string): Promise<RatingResu
       ${profileContext.summary}
     `;
 
-    const response = await fetch('/api/ai-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+    const { data, error: invokeError } = await supabase.functions.invoke('ai-chat', {
+      body: { 
         messages: [{ role: 'user', content: "Evaluate my profile based on the system instructions." }],
         systemPrompt: prompt,
         profileContext: null 
-      }),
+      },
+      responseType: 'stream',
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to contact AI service');
+    if (invokeError) {
+      throw new Error(invokeError.message || 'Failed to contact AI service');
     }
 
-    if (!response.body) throw new Error('No response body');
+    if (!data) throw new Error('No response body');
 
-    const reader = response.body.getReader();
+    const reader = data.getReader();
     const decoder = new TextDecoder();
     let textBuffer = '';
     let fullResponse = '';
