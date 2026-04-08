@@ -48,6 +48,11 @@
         - Implemented Chat History saving in 'AIChat.tsx' using 'chat_messages' table.
         - Added Region Filter to 'Universities.tsx' (North America, Europe, Asia, CIS).
         - Created SQL migration file 'supabase/migrations/20251224_fix_exams_decimal.sql' for IELTS fractional scores.
+
+89) Remove All Comments:
+    - Task: Remove all single-line and multi-line comments from all source files (`.ts`, `.tsx`).
+    - Implementation: Created and executed a Node.js script (`remove_comments.js`) to recursively process the `src/` directory.
+    - Outcome: All comments were successfully removed from the codebase. The temporary script was then deleted.
         - Enhanced error messages in 'Exams.tsx' to guide user if DB migration is missing.
 
 89) Fixes & Improvements:
